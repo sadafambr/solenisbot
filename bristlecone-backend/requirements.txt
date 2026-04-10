@@ -1,0 +1,36 @@
+# Flask framework for building web applications
+Flask==3.0.3
+
+# Flask-Cors for handling Cross-Origin Resource Sharing (CORS) in Flask
+Flask-Cors==4.0.0
+
+# Flask-JWT-Extended for JWT authentication
+flask_jwt_extended==4.6.0
+
+# PyYAML for YAML file parsing
+PyYAML==6.0.1
+
+# bcrypt for password hashing
+bcrypt==4.1.2
+
+# Snowflake connector for Python
+snowflake-connector-python==3.6.0
+
+# LangChain and its core and OpenAI components for building language model applications
+langchain==0.1.13
+langchain-core==0.1.33
+langchain-openai==0.1.1
+
+# LangChain Community for additional integrations
+langchain_community==0.0.30
+
+# lxml-html-clean for sanitizing HTML content
+lxml-html-clean==0.1.1
+
+# Python-dotenv for reading environment variables from .env files
+python-dotenv==1.0.1
+
+# tiktoken for tokenizing text for use with language models
+tiktoken==0.7.0
+
+google-cloud-bigquery==3.17.2

@@ -1,0 +1,11 @@
+** Table Structure **
+
+SUPPLIER (
+    S_SUPPKEY     Number,   
+    S_NAME        Varchar,  
+    S_ADDRESS     Varchar, 
+    S_NATIONKEY   Number,   
+    S_PHONE       Varchar,  r
+    S_ACCTBAL     Number,   
+    S_COMMENT     Varchar   
+)
