@@ -16,6 +16,11 @@ import {
   Legend,
   ResponsiveContainer,
   LabelList,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  AreaChart,
+  Area,
 } from "recharts"
  
 /** Monochrome enterprise chart palette (no brand/teal accents). */
@@ -35,19 +40,56 @@ export function renderChart(message: Message) {
   }
   // --- End: Error/No Data Handling ---
  
-  // Handle both response_graph and chartData formats
+  // Determine chart type from chartType, graph_type or existing type (normalize all hyphens)
+  const rawType = (message.chartType || message.graph_type || "").trim()
+  const chartType = rawType
+    ? (MessageType[rawType.toUpperCase().replace(/-/g, "_") as keyof typeof MessageType] ?? message.type)
+    : message.type
+
+  const { chartTitle } = message
+
+  if (chartType === MessageType.SCATTER_CHART) {
+    const scatter = message.scatterData
+    if (!scatter?.datasets?.length) return null
+    return (
+      <div className="w-full">
+        {chartTitle && (
+          <h4 className="font-display mb-2 text-center text-base font-normal text-black">{chartTitle}</h4>
+        )}
+        <div className="h-[28rem] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis type="number" dataKey="x" name="x" />
+              <YAxis type="number" dataKey="y" name="y" />
+              <ZAxis range={[60, 60]} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                contentStyle={{
+                  backgroundColor: "white",
+                  borderColor: "hsl(var(--border))",
+                  borderRadius: "var(--radius)",
+                }}
+              />
+              <Legend />
+              {scatter.datasets.map((dataset, index) => (
+                <Scatter
+                  key={index}
+                  name={dataset.label || `Series ${index + 1}`}
+                  data={dataset.data}
+                  fill={dataset.backgroundColor || PIE_SHELL_FILLS[index % PIE_SHELL_FILLS.length]}
+                />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    )
+  }
+
   const chartData = message.response_graph || message.chartData
   if (!chartData) return null
- 
-  // Determine chart type from chartType, graph_type or existing type
-  const chartType = message.chartType
-    ? MessageType[message.chartType.toUpperCase().replace("-", "_") as keyof typeof MessageType]
-    : message.graph_type
-    ? MessageType[message.graph_type.toUpperCase().replace("-", "_") as keyof typeof MessageType]
-    : message.type
- 
-  const { chartTitle } = message
- 
+
   switch (chartType) {
     case MessageType.LINE_CHART:
       return (
@@ -120,10 +162,13 @@ export function renderChart(message: Message) {
           <div className="h-[28rem] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={chartData.labels.map((label: string, index: number) => ({
-                  name: label,
-                  value: chartData.datasets[0].data[index],
-                }))}
+                data={chartData.labels.map((label: string, index: number) => {
+                  const row: Record<string, string | number> = { name: label }
+                  chartData.datasets.forEach((dataset, j) => {
+                    row[dataset.label || `series_${j}`] = dataset.data[index]
+                  })
+                  return row
+                })}
                 margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
               >
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -151,16 +196,18 @@ export function renderChart(message: Message) {
                   }}
                 />
                 <Legend />
-                {chartData.datasets.map((dataset: any, index: number) => (
+                {chartData.datasets.map((dataset: any, index: number) => {
+                  const key = dataset.label || `series_${index}`
+                  return (
                   <Bar
                     key={index}
-                    dataKey="value"
+                    dataKey={key}
                     name={dataset.label || `Dataset ${index + 1}`}
                     fill={CHART_STROKE}
                     radius={[4, 4, 0, 0]}
                   >
                     <LabelList
-                      dataKey="value"
+                      dataKey={key}
                       position="top"
                       style={{
                         textAnchor: "middle",
@@ -170,7 +217,8 @@ export function renderChart(message: Message) {
                       formatter={(value: number) => value.toFixed(1)}
                     />
                   </Bar>
-                ))}
+                  )
+                })}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -218,7 +266,61 @@ export function renderChart(message: Message) {
           </div>
         </div>
       )
- 
+
+    case MessageType.AREA_CHART:
+      return (
+        <div className="w-full">
+          {chartTitle && (
+            <h4 className="font-display mb-2 text-center text-base font-normal text-black">{chartTitle}</h4>
+          )}
+          <div className="h-[28rem] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={chartData.labels.map((label: string, index: number) => {
+                  const row: Record<string, string | number> = { name: label }
+                  chartData.datasets.forEach((dataset, j) => {
+                    row[dataset.label || `Dataset ${j + 1}`] = dataset.data[index]
+                  })
+                  return row
+                })}
+                margin={{ top: 10, right: 30, left: 20, bottom: 120 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={120}
+                  interval={0}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => (value.length > 20 ? `${value.substring(0, 20)}...` : value)}
+                />
+                <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                <Tooltip
+                  formatter={(value: number) => value.toLocaleString()}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    borderColor: "hsl(var(--border))",
+                    borderRadius: "var(--radius)",
+                  }}
+                />
+                <Legend />
+                {chartData.datasets.map((dataset: any, index: number) => (
+                  <Area
+                    key={index}
+                    type="monotone"
+                    dataKey={dataset.label || `Dataset ${index + 1}`}
+                    stroke={CHART_STROKE}
+                    fill={CHART_STROKE}
+                    fillOpacity={0.2}
+                  />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )
+
     default:
       return null
   }

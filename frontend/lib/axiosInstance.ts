@@ -6,7 +6,10 @@ const api = axios.create({
     /\/$/,
     ''
   ),
-  withCredentials: true,
+  // JWT is sent via Authorization header; cookies are not required. Keeping this false
+  // avoids browser CORS failures that surface as Axios "Network Error" when the API
+  // does not echo Access-Control-Allow-Origin for credentialed requests.
+  withCredentials: false,
 });
 
 // Updated request interceptor
@@ -35,7 +38,7 @@ api.interceptors.response.use(
 
       // Redirect to login if in browser environment
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     }
 

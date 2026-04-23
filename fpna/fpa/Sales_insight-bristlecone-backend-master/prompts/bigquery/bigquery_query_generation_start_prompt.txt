@@ -1,0 +1,8 @@
+user-input: {user_input}
+
+
+Note: Provide the sql query inside the JSON format below
+
+
+{{"ai_response": "<Insert SQL query here>"}}
+

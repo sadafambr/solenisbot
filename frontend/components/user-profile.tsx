@@ -19,6 +19,14 @@ type UserProfileProps = {
   variant?: "default" | "headerDark"
 }
 
+function userInitials(user: any) {
+  const first = (user?.firstName ?? user?.first_name ?? "").trim()
+  const last = (user?.lastName ?? user?.last_name ?? "").trim()
+  const a = first.split(/\s+/).filter(Boolean)[0]?.[0] ?? ""
+  const b = last.split(/\s+/).filter(Boolean)[0]?.[0] ?? ""
+  return (a + b || "U").toUpperCase()
+}
+
 export default function UserProfile({ variant = "default" }: UserProfileProps) {
   const { user } = useUserStore()
   const { clearMessages } = useMessagesStore()
@@ -50,26 +58,9 @@ export default function UserProfile({ variant = "default" }: UserProfileProps) {
                 dark ? "bg-white/15 text-white" : "bg-neutral-900 text-white"
               )}
             >
-              {((user?.firstName ?? "")
-                .split(" ")
-                .filter(Boolean)
-                .map((n: string) => n[0])
-                .join("") || "U")}
-              {((user?.lastName ?? "")
-                .split(" ")
-                .filter(Boolean)
-                .map((n: string) => n[0])
-                .join(""))}
+              {userInitials(user)}
             </AvatarFallback>
           </Avatar>
-          <span
-            className={cn(
-              "hidden max-w-[9rem] truncate text-[12px] font-medium sm:inline",
-              dark ? "text-white/85" : "text-neutral-900"
-            )}
-          >
-            {user?.firstName} {user?.lastName}
-          </span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -77,10 +68,11 @@ export default function UserProfile({ variant = "default" }: UserProfileProps) {
         className="w-56 rounded-md border border-[#E0E0E0] bg-[#F7F7F5] p-0 shadow-lg"
       >
         <div className="border-b border-[#E0E0E0] px-3 py-2.5">
-          <p className="text-sm font-medium text-black">
-            {user?.firstName} {user?.lastName}
-          </p>
-          <p className="text-[11px] text-neutral-500">{user?.email}</p>
+          {user?.email ? (
+            <p className="text-sm font-medium text-black">{user.email}</p>
+          ) : (
+            <p className="text-sm font-medium text-black">Account</p>
+          )}
         </div>
         <DropdownMenuSeparator className="m-0 bg-[#E0E0E0]" />
         <DropdownMenuItem

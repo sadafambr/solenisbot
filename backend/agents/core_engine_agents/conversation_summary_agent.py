@@ -22,7 +22,7 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 
 # Local application imports
 from models.azure_openai_model import model
-from utils.helper_functions import load_prompt
+from utils.prompt_loader import load_prompt
  
 # -----------------------------------------------------------------------------
 # SECTION: Load Prompt
@@ -80,12 +80,22 @@ def conversation_summary_agent(conversation_history: List[List[Dict[str, str]]])
         ValueError: If the conversation history is not provided in the correct format.
     """
  
-    # Validate the input conversation history
-    if not isinstance(conversation_history, list) or not all(isinstance(entry, list) and all(isinstance(sub_entry, dict) for sub_entry in entry) for entry in conversation_history):
+    # Validate and normalize: accept List[List[Dict]] or a flat List[Dict] (workflow format)
+    if not isinstance(conversation_history, list):
+        raise ValueError("Invalid input: conversation_history must be a list.")
+    if not conversation_history:
+        return ("", 0, 0)
+    if isinstance(conversation_history[0], dict):
+        sublists = [conversation_history]
+    elif isinstance(conversation_history[0], list):
+        sublists = conversation_history
+    else:
+        raise ValueError("Invalid input: Expected dicts or lists of dicts in conversation history.")
+    if not all(isinstance(entry, list) and all(isinstance(sub_entry, dict) for sub_entry in entry) for entry in sublists):
         raise ValueError("Invalid input: Expected a list of lists of dictionaries representing the conversation history.")
- 
+
     # Flatten the conversation history into a single list of dictionaries
-    flattened_history = [item for sublist in conversation_history for item in sublist]
+    flattened_history = [item for sublist in sublists for item in sublist]
  
     # Use OpenAI callback to capture token counts
     with get_openai_callback() as cb:

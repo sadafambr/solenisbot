@@ -1,0 +1,519 @@
+
+**List of Examples**
+
+# Note: In all examples, when a department is specified, all other filters (Account, Client Partner, Commercial BU, Deal Type, Deal Size, Customer Type, etc.) must be applied to both vw_budget and vw_opportunity as per the Filtering Logic. Only skip Department in vw_opportunity.
+
+**Example-1**
+--------------
+**User Input**: What is XYZ BU budget achievement in April 2024 for SAP Department?
+
+**AI Response**:
+WITH budget AS (
+  SELECT
+    Commercial_BU_Name,
+    SUM(CASE WHEN LOWER(TRIM(Department)) = 'sap' THEN COALESCE("April", 0) ELSE 0 END) AS budget_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_budget`
+  WHERE LOWER(TRIM(Commercial_BU_Name)) = 'xyz'
+    AND "Fiscal Year" = 'FY25'
+  GROUP BY Commercial_BU_Name
+),
+opportunity AS (
+  SELECT
+    Commercial_BU,
+    SUM(Amount_converted * (SAFE_CAST(SAP_Studio AS FLOAT64) / 100)) AS closed_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'xyz'
+    AND EXTRACT(MONTH FROM Close_Date) = 4
+    AND EXTRACT(YEAR FROM Close_Date) = 2024
+    AND Opportunity_Status = 'Closed'
+    AND SAP_Studio IS NOT NULL
+  GROUP BY Commercial_BU
+)
+SELECT
+  b.Commercial_BU_Name,
+  o.closed_amount,
+  b.budget_amount,
+  SAFE_DIVIDE(o.closed_amount, b.budget_amount) * 100 AS budget_achievement
+FROM budget b
+JOIN opportunity o
+  ON b.Commercial_BU_Name = o.Commercial_BU;
+
+---
+
+**Example-2**
+--------------
+**User Input**: Year over Year (YoY) booking trend for Account 104 in Q1 FY25?
+
+**AI Response**:
+
+WITH bookings_fy24_q1 AS (
+  SELECT
+    SUM(Amount_converted) AS total_bookings
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Account = 'Account 104'
+    AND Close_Date >= DATE '2023-04-01'
+    AND Close_Date < DATE '2023-07-01'
+    AND Opportunity_Status = 'Closed'
+),
+bookings_fy25_q1 AS (
+  SELECT
+    SUM(Amount_converted) AS total_bookings
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Account = 'Account 104'
+    AND Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2024-07-01'
+    AND Opportunity_Status = 'Closed'
+)
+SELECT
+  b24.total_bookings AS bookings_fy24_q1,
+  b25.total_bookings AS bookings_fy25_q1,
+  SAFE_DIVIDE((b25.total_bookings - b24.total_bookings), b24.total_bookings) * 100 AS YoY_growth
+FROM bookings_fy24_q1 b24
+CROSS JOIN bookings_fy25_q1 b25;
+
+---
+
+**Example-3**
+--------------
+**User Input**: Compare Average deal size YOY for Commercial BU 1 IN SAP Department?
+
+**AI Response**:
+
+WITH deals_fy24 AS (
+  SELECT
+    SAFE_DIVIDE(
+      SUM(Amount_converted * (SAFE_CAST(SAP_Studio AS FLOAT64) / 100)),
+      COUNTIF(Opportunity_Status = 'Closed' AND SAFE_CAST(SAP_Studio AS FLOAT64) > 0)
+    ) AS avg_deal_size
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'commercial bu 1'
+    AND Close_Date >= DATE '2023-04-01'
+    AND Close_Date < DATE '2024-04-01'
+    AND Opportunity_Status = 'Closed'
+    AND SAFE_CAST(SAP_Studio AS FLOAT64) > 0
+),
+deals_fy25 AS (
+  SELECT
+    SAFE_DIVIDE(
+      SUM(Amount_converted * (SAFE_CAST(SAP_Studio AS FLOAT64) / 100)),
+      COUNTIF(Opportunity_Status = 'Closed' AND SAFE_CAST(SAP_Studio AS FLOAT64) > 0)
+    ) AS avg_deal_size
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'commercial bu 1'
+    AND Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2025-04-01'
+    AND Opportunity_Status = 'Closed'
+    AND SAFE_CAST(SAP_Studio AS FLOAT64) > 0
+)
+SELECT
+  'FY24' AS year, d24.avg_deal_size
+FROM deals_fy24 d24
+UNION ALL
+SELECT
+  'FY25' AS year, d25.avg_deal_size
+FROM deals_fy25 d25;
+
+---
+
+**Example-4**
+--------------
+**User Input**: what is average deal velocity for Data & Cloud Department Q1 FY25?
+
+**AI Response**:
+SELECT
+  AVG(DATE_DIFF(Close_Date, CAST(Created_Date AS DATE), DAY)) AS average_deal_velocity
+FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+WHERE
+  Opportunity_Status = 'Closed'
+  AND Data_Cloud IS NOT NULL
+  AND Close_Date >= DATE '2024-04-01'
+  AND Close_Date < DATE '2024-07-01'
+
+---
+
+**Example-5**
+--------------
+**User Input**: How did bookings change for Client Partner 1 YOY IN March?
+
+**AI Response**:
+WITH bookings_fy24_mar AS (
+  SELECT
+    SUM(Amount_converted) AS total_bookings_fy24_mar
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Client_Partner = 'Client Partner 1'
+    AND EXTRACT(MONTH FROM Close_Date) = 3
+    AND Close_Date >= DATE '2024-03-01'
+    AND Close_Date < DATE '2024-04-01'
+    AND Opportunity_Status = 'Closed'
+),
+bookings_fy25_mar AS (
+  SELECT
+    SUM(Amount_converted) AS total_bookings_fy25_mar
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Client_Partner = 'Client Partner 1'
+    AND EXTRACT(MONTH FROM Close_Date) = 3
+    AND Close_Date >= DATE '2025-03-01'
+    AND Close_Date < DATE '2025-04-01'
+    AND Opportunity_Status = 'Closed'
+)
+SELECT
+  b24.total_bookings_fy24_mar,
+  b25.total_bookings_fy25_mar,
+  SAFE_DIVIDE((b25.total_bookings_fy25_mar - b24.total_bookings_fy24_mar), b24.total_bookings_fy24_mar) * 100 AS YoY_Change
+FROM bookings_fy24_mar b24
+CROSS JOIN bookings_fy25_mar b25;
+
+---
+
+**Example-6: Win Rate (Count-based)**
+--------------
+**User Input**: What is the win rate for Technology BU in Q1 FY25?
+
+**AI Response**:
+```sql
+WITH opportunity_counts AS (
+  SELECT
+    COUNTIF(Opportunity_Status = 'Closed') AS won_opportunities,
+    COUNTIF(Opportunity_Status IN ('Closed', 'Lost', 'Abandoned')) AS total_opportunities
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'technology'
+    AND Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2024-07-01'  -- Q1 FY25: April-June 2024
+)
+SELECT
+  won_opportunities,
+  total_opportunities,
+  SAFE_DIVIDE(won_opportunities, total_opportunities) * 100 AS win_rate
+FROM opportunity_counts
+WHERE total_opportunities > 0;
+```
+---
+
+**Example-7: Win Rate with Department Weights**
+--------------
+**User Input**: Show win rate for SAP Department in Q1 FY25 by account?
+
+**AI Response**:
+```sql
+WITH opportunity_counts AS (
+  SELECT
+    Account,
+    COUNTIF(Opportunity_Status = 'Closed' AND SAP_Studio IS NOT NULL) AS won_opportunities,
+    COUNTIF(Opportunity_Status IN ('Closed', 'Lost', 'Abandoned') AND SAP_Studio IS NOT NULL) AS total_opportunities
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2024-07-01'  -- Q1 FY25: April-June 2024
+  GROUP BY Account
+)
+SELECT
+  Account,
+  won_opportunities,
+  total_opportunities,
+  SAFE_DIVIDE(won_opportunities, total_opportunities) * 100 AS win_rate
+FROM opportunity_counts
+WHERE total_opportunities > 0
+ORDER BY win_rate DESC;
+```
+---
+
+**Example-8: Win Ratio (Amount-based)**
+--------------
+**User Input**: What is the win ratio for Commercial BU 1 in Q1 FY25?
+
+**AI Response**:
+```sql
+WITH opportunity_amounts AS (
+  SELECT
+    SUM(CASE WHEN Opportunity_Status = 'Closed' THEN Amount_converted ELSE 0 END) AS closed_amount,
+    SUM(Amount_converted) AS total_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'commercial bu 1'
+    AND Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2024-07-01'  -- Q1 FY25: April-June 2024
+    AND Opportunity_Status IN ('Closed', 'Lost', 'Abandoned')
+)
+SELECT
+  closed_amount,
+  total_amount,
+  SAFE_DIVIDE(closed_amount, total_amount) * 100 AS win_ratio
+FROM opportunity_amounts
+WHERE total_amount > 0;
+```
+---
+
+**Example-9: Win Ratio with Department Weights**
+--------------
+**User Input**: Show win ratio for Data & Cloud Department in Q1 FY25 by account?
+
+**AI Response**:
+```sql
+WITH opportunity_amounts AS (
+  SELECT
+    Account,
+    SUM(CASE 
+          WHEN Opportunity_Status = 'Closed' 
+          THEN Amount_converted * (SAFE_CAST(Data_Cloud AS FLOAT64) / 100) 
+          ELSE 0 
+        END) AS closed_amount,
+    SUM(Amount_converted * (SAFE_CAST(Data_Cloud AS FLOAT64) / 100)) AS total_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2024-07-01'  -- Q1 FY25: April-June 2024
+    AND Opportunity_Status IN ('Closed', 'Lost', 'Abandoned')
+    AND Data_Cloud IS NOT NULL
+  GROUP BY Account
+)
+SELECT
+  Account,
+  closed_amount,
+  total_amount,
+  SAFE_DIVIDE(closed_amount, total_amount) * 100 AS win_ratio
+FROM opportunity_amounts
+WHERE total_amount > 0
+ORDER BY win_ratio DESC;
+```
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'commercial bu 1'
+    AND Close_Date >= DATE '2023-04-01'
+    AND Close_Date < DATE '2024-04-01'
+    AND Opportunity_Status IN ('Closed', 'Lost', 'Abandoned')
+    AND SAP_Studio IS NOT NULL
+),
+win_ratio_fy25 AS (
+  SELECT
+    SUM(CASE WHEN Opportunity_Status = 'Closed' THEN Amount_converted * (SAFE_CAST(SAP_Studio AS FLOAT64) / 100) ELSE 0 END) AS closed_amount,
+    SUM(Amount_converted * (SAFE_CAST(SAP_Studio AS FLOAT64) / 100)) AS total_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM(Commercial_BU)) = 'commercial bu 1'
+    AND Close_Date >= DATE '2024-04-01'
+    AND Close_Date < DATE '2025-04-01'
+    AND Opportunity_Status IN ('Closed', 'Lost', 'Abandoned')
+    AND SAP_Studio IS NOT NULL
+)
+SELECT
+  SAFE_DIVIDE(wr24.closed_amount, wr24.total_amount) * 100 AS win_ratio_fy24,
+  SAFE_DIVIDE(wr25.closed_amount, wr25.total_amount) * 100 AS win_ratio_fy25
+FROM win_ratio_fy24 wr24, win_ratio_fy25 wr25;
+
+---
+
+**Example-8**
+--------------
+**User Input**: What is Account 74 budget achievement in April 2024 for SAP Department?
+
+**AI Response**:
+WITH budget AS (
+  SELECT
+    Account_Name,
+    SUM(CASE WHEN LOWER(TRIM(Department)) = 'sap' THEN COALESCE("April", 0) ELSE 0 END) AS budget_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_budget`
+  WHERE Account_Name = 'Account 74'
+    AND "Fiscal Year" = 'FY25'
+  GROUP BY Account_Name
+),
+opportunity AS (
+  SELECT
+    Account,
+    SUM(Amount_converted * (SAFE_CAST(SAP_Studio AS FLOAT64) / 100)) AS closed_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    Account = 'Account 74'
+    AND EXTRACT(MONTH FROM Close_Date) = 4
+    AND EXTRACT(YEAR FROM Close_Date) = 2024
+    AND Opportunity_Status = 'Closed'
+    AND SAP_Studio IS NOT NULL
+  GROUP BY Account
+)
+SELECT
+  b.Account_Name,
+  o.closed_amount,
+  b.budget_amount,
+  SAFE_DIVIDE(o.closed_amount, b.budget_amount) * 100 AS budget_achievement
+FROM budget b
+JOIN opportunity o
+  ON b.Account_Name = o.Account;
+
+---
+
+**Example-9**
+--------------
+**User Input**: what is RCG BU budget achievement in Q2 FY25 for SAP department?
+
+**AI Response**:
+WITH budget AS (
+  SELECT
+    SUM(COALESCE("July", 0) + COALESCE("August", 0) + COALESCE("September", 0)) AS budget_amount
+  FROM
+    `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_budget`
+  WHERE
+    LOWER(TRIM("Department")) = 'sap'
+    AND LOWER(TRIM("Commercial_BU_Name")) = 'rcg'
+    AND "Fiscal Year" = 'FY25'
+),
+opportunity AS (
+  SELECT
+    SUM("Amount_converted" * (SAFE_CAST("SAP_Studio" AS FLOAT64) / 100)) AS closed_amount
+  FROM
+    `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    "Opportunity_Status" = 'Closed'
+    AND LOWER(TRIM("Commercial_BU")) = 'rcg'
+    AND "Close_Date" >= DATE '2024-07-01'
+    AND "Close_Date" < DATE '2024-10-01'
+    AND "SAP_Studio" IS NOT NULL
+)
+SELECT
+  o.closed_amount,
+  b.budget_amount,
+  SAFE_DIVIDE(o.closed_amount, b.budget_amount) * 100 AS budget_achievement
+FROM
+  budget b,
+  opportunity o
+WHERE
+  b.budget_amount IS NOT NULL
+  AND b.budget_amount > 0;
+
+---
+
+**Example-10**
+--------------
+**User Input**: What is win ratio for XYZ BU in Q2 FY25 by deal size?
+
+**AI Response**:
+
+WITH opportunity AS (
+  SELECT
+    "Amount_converted",
+    CASE WHEN "Amount_converted" >= 1000000 THEN 'Large' ELSE 'Small' END AS Deal_Size,
+    "Opportunity_Status"
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE
+    LOWER(TRIM("Commercial_BU")) = 'XYZ'
+    AND "Opportunity_Status" IN ('Closed', 'Lost', 'Abandoned')
+    AND "Close_Date" >= DATE '2024-07-01'
+    AND "Close_Date" < DATE '2024-10-01'
+)
+SELECT
+  Deal_Size,
+  SUM(CASE WHEN "Opportunity_Status" = 'Closed' THEN "Amount_converted" ELSE 0 END) AS closed_amount,
+  SUM("Amount_converted") AS total_amount,
+  SAFE_DIVIDE(
+    SUM(CASE WHEN "Opportunity_Status" = 'Closed' THEN "Amount_converted" ELSE 0 END),
+    SUM("Amount_converted")
+  ) * 100 AS win_ratio
+FROM opportunity
+GROUP BY Deal_Size
+ORDER BY Deal_Size DESC;
+
+---
+
+**Example-11**
+--------------
+**User Input**: Diagnostic — list counts and sums for Technology BU in Q2 FY25
+
+**AI Response**:
+SELECT
+  COUNTIF(LOWER(TRIM(Opportunity_Status)) = 'closed') AS won_opportunities,
+  COUNTIF(LOWER(TRIM(Opportunity_Status)) IN ('closed','lost','abandoned')) AS total_opportunities,
+  COALESCE(SUM(CASE WHEN LOWER(TRIM(Opportunity_Status)) = 'closed' THEN Amount_converted ELSE 0 END), 0) AS closed_amount,
+  COALESCE(SUM(CASE WHEN LOWER(TRIM(Opportunity_Status)) IN ('closed','lost','abandoned') THEN Amount_converted ELSE 0 END), 0) AS total_amount
+FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+WHERE LOWER(TRIM(Commercial_BU)) = 'technology'
+  AND Close_Date >= DATE '2024-07-01'
+  AND Close_Date < DATE '2024-10-01';
+
+---
+
+**Example-12**
+--------------
+**User Input**: Win ratio for Technology BU in Q2 FY25 (amount)
+
+**AI Response**:
+WITH opportunity AS (
+  SELECT
+    COALESCE(SUM(CASE WHEN Opportunity_Status = 'Closed' THEN Amount_converted ELSE 0 END), 0) AS closed_amount,
+    COALESCE(SUM(CASE WHEN Opportunity_Status IN ('Closed','Lost','Abandoned') THEN Amount_converted ELSE 0 END), 0) AS total_amount
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+  WHERE LOWER(TRIM(Commercial_BU)) = 'technology'
+    AND Close_Date >= DATE '2024-07-01'
+    AND Close_Date < DATE '2024-10-01'
+)
+SELECT
+  closed_amount,
+  total_amount,
+  SAFE_DIVIDE(closed_amount, total_amount) * 100 AS win_ratio
+FROM opportunity
+WHERE total_amount > 0;
+
+---
+
+**Example-13**
+
+--------------
+
+**User Input**: What is Account Executive Harshal Mehta budget achievement in Q2 FY25?
+ 
+**AI Response**:
+
+WITH budget AS (
+
+  SELECT
+
+    SUM(COALESCE("July", 0) + COALESCE("August", 0) + COALESCE("September", 0)) AS budget_amount
+
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_sales_hunting_budget`
+
+  WHERE
+
+    `Fiscal Year` = 'FY25'
+
+    AND LOWER(TRIM(`Opportunity Owner`)) = 'harshal mehta'
+
+),
+
+opportunity AS (
+
+  SELECT
+
+    SUM(Amount_converted) AS closed_amount
+
+  FROM `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity`
+
+  WHERE
+
+    Opportunity_Status = 'Closed'
+
+    AND Close_Date >= DATE '2024-07-01'
+
+    AND Close_Date < DATE '2024-10-01'
+
+    -- If an explicit opportunity owner column is present, filter it as well
+
+)
+
+SELECT
+
+  o.closed_amount,
+
+  b.budget_amount,
+
+  SAFE_DIVIDE(o.closed_amount, b.budget_amount) * 100 AS budget_achievement
+
+FROM budget b, opportunity o
+
+WHERE b.budget_amount > 0;
+
+ 

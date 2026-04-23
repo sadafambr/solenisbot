@@ -1,0 +1,40 @@
+# Flask framework for building web applications
+Flask==3.0.3
+
+# Flask-Cors for handling Cross-Origin Resource Sharing (CORS) in Flask
+Flask-Cors==4.0.0
+
+# HashiCorp Vault for managing secrets and protecting sensitive data
+#hvac==2.3.0
+
+# LangChain and its core and OpenAI components for building language model applications
+langchain==0.1.13
+langchain-core==0.1.33
+langchain-openai==0.1.1
+
+# lxml-html-clean for sanitizing HTML content
+lxml-html-clean==0.1.1
+
+# newspaper3k for extracting news articles from websites - (Article Library)
+#newspaper3k==0.2.8
+
+# pycountry for accessing ISO country, subdivision, language, currency, and script definitions
+pycountry==23.12.11
+
+# Python-dotenv for reading environment variables from .env files
+python-dotenv==1.0.1
+
+# Snowflake connector for Python for working with Snowflake databases
+snowflake-connector-python==3.7.1
+
+# Streamlit for building and sharing data apps
+streamlit==1.37.1
+
+# tiktoken for tokenizing text for use with language models
+tiktoken==0.7.0
+
+# Flask-JWT-Extended for JWT-based authentication
+flask-jwt-extended==4.7.1
+
+# bcrypt for password hashing
+bcrypt==4.2.1

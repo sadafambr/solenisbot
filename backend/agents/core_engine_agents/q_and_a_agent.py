@@ -22,7 +22,7 @@ import logging
 
 # Local application imports
 from models.azure_openai_model import model
-from utils.helper_functions import load_prompt
+from utils.prompt_loader import load_prompt
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -83,12 +83,10 @@ def q_and_a_agent(user_input: str, agents_response: str, conversation_history: s
     """
     # Truncate agents_response if too long to avoid OpenAI message length limit
     max_length = 5000000  # ~5MB limit to be safe
+    if isinstance(agents_response, (list, dict)):
+        agents_response = str(agents_response)
     if isinstance(agents_response, str) and len(agents_response) > max_length:
         agents_response = agents_response[:max_length] + "\n\n[Response truncated due to length]"
-    elif isinstance(agents_response, (list, dict)):
-        agents_response_str = str(agents_response)
-        if len(agents_response_str) > max_length:
-            agents_response = agents_response_str[:max_length] + "\n\n[Response truncated due to length]"
 
     try:
         with get_openai_callback() as cb:

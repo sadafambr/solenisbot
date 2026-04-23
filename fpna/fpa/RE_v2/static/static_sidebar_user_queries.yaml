@@ -1,0 +1,23 @@
+# -----------------------------------------------------------------------------
+# File Name: static_sidebar_user_queries.yaml
+#
+# Description:
+# This file contains a predefined list of static user questions displayed 
+# on the sidebar navigation in the frontend application. These prompts serve as 
+# starting points for users to complete their queries, enhancing interaction by 
+# offering a guided approach to common tasks and questions.
+# -----------------------------------------------------------------------------
+ 
+static_side_bar_user_questions:
+  - My debtors
+  - Show top 10 company dues to CBRE
+  - Retrieve all expiring leases
+  - Fetch availabilities not updated in the past month
+  - Availability between <min> sqft and <max> sqft at <micro-market> in <city>
+  - Recent meetings with
+  - Who can introduce me to
+  - Extract past opportunities with
+  - Recent news articles about
+  - Employee details of
+  - Draft an introductory email to
+  - Reactivate Salesforce

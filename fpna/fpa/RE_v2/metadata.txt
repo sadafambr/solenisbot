@@ -1,0 +1,11 @@
+COMMERCIAL_BU(Commercial Business Unit metadata)
+Commercial_BU_Name: Name of the commercial business unit. Sample values: [BU1, BU2, BU3]
+Commercial_BU: Code of the commercial business unit. Sample values: [CBU01, CBU02]
+
+SALES_DATA(Sales transactional data)
+Client_Partner: Name of the client partner handling the account. Sample values: [John Smith, Sarah Johnson]
+Opportunity_Owner: Name of the opportunity owner. Sample values: [Manish Nair, Madhu Narasimhan]
+Department: Department associated with the sale. Sample values: [Integration, Consulting]
+Account_Name: Name of the account/customer. Sample values: [Boston Scientific, SAP Oracle]
+Amount: Total deal amount. Sample values: [100000, 500000]
+Close_Date: Date when the deal was closed. Sample values: [2023-01-15, 2023-05-20]

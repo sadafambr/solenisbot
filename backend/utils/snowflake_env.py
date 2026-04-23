@@ -1,10 +1,13 @@
 """
-Resolve Snowflake credentials from env.
+Resolve Snowflake credentials from env and shared SQL helpers.
 
 Supports Bristlecone-style names (SNOWFLAKE_*) and RE_v2 .env names (SF_*, DB_*).
+All Snowflake connections should use ``snowflake_connect_kwargs()`` so credentials
+stay consistent across chat history, auth, and the query connector.
 """
 
 import os
+import re
 
 from dotenv import load_dotenv
 
@@ -58,3 +61,13 @@ def snowflake_connect_kwargs() -> dict:
     if role:
         kwargs["role"] = role
     return {k: v for k, v in kwargs.items() if v is not None and v != ""}
+
+
+def clean_snowflake_query(query: str) -> str:
+    """
+    Normalize LLM-generated SQL: strip unnecessary quotes on simple identifiers,
+    collapse whitespace.
+    """
+    cleaned = re.sub(r"\"([a-zA-Z0-9_]+)\"", r"\1", query)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned

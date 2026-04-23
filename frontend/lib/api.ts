@@ -1,4 +1,4 @@
-import { type Message, MessageType } from "./types";
+import { type Message, MessageType, type TableData } from "./types";
 import {
   graphPointsToTableData,
   metricsToBarChartData,
@@ -13,6 +13,97 @@ import {
   wantsVisualization,
 } from "./response-formatting";
 
+/** Agent steps often return an array of row objects (e.g. snowflake_agent) — normalize for DATA_TABLE. */
+function tableDataFromObjectRows(rows: Record<string, unknown>[]): TableData | null {
+  if (!rows?.length) return null;
+  const first = rows[0];
+  if (!first || typeof first !== "object") return null;
+  const columns = Object.keys(first);
+  if (!columns.length) return null;
+  const outRows = rows.map((row) =>
+    columns.map((c) => {
+      const v = row[c];
+      if (v == null) return "";
+      if (typeof v === "number") return v;
+      const s = String(v).replace(/,/g, "").trim();
+      const n = Number(s);
+      if (Number.isFinite(n) && /^-?[\d.]+$/.test(s)) return n;
+      return String(v);
+    })
+  );
+  return { columns, rows: outRows };
+}
+
+/** Backend sometimes returns non-string ellis_response; parsers expect string. */
+function normalizeEllisText(raw: unknown): string | undefined {
+  if (raw == null) return undefined;
+  const s = typeof raw === "string" ? raw : String(raw);
+  return s.trim() === "" ? undefined : s;
+}
+
+/**
+ * Only treat as API failure when `error` is meaningful.
+ * Avoid false positives: e.g. empty arrays/objects are truthy in JS but not real errors.
+ */
+export function hasMeaningfulApiError(res: any): boolean {
+  if (!res || typeof res !== "object") return false;
+  if (res.error === true) return true;
+  const e = res.error;
+  if (typeof e === "string" && e.trim() !== "") return true;
+  if (typeof e === "number" && !Number.isNaN(e) && e !== 0) return true;
+  return false;
+}
+
+/** Last resort when transform returns null but the payload still has agent rows or ellis text. */
+export function buildFallbackAssistantMessages(apiResponse: any, userInput: string = ""): Message[] | null {
+  if (hasMeaningfulApiError(apiResponse)) return null;
+  const present: any[] = Array.isArray(apiResponse?.conversation?.present_conversation)
+    ? apiResponse.conversation.present_conversation
+    : [];
+  const agentTable = extractAgentTableData(present);
+  const preferTable = wantsTabularDisplay(userInput, undefined);
+  if (agentTable && (preferTable || (agentTable.rows?.length ?? 0) > 0)) {
+    return [
+      {
+        id: Date.now().toString(),
+        content: "",
+        type: MessageType.DATA_TABLE,
+        role: "assistant",
+        timestamp: new Date(),
+        tableData: agentTable,
+      },
+    ];
+  }
+  const ellisRaw = present.find((x: any) => x?.ellis_response)?.ellis_response;
+  const text = normalizeEllisText(ellisRaw);
+  if (text) {
+    return [
+      {
+        id: Date.now().toString(),
+        content: text,
+        type: MessageType.TEXT,
+        role: "assistant",
+        timestamp: new Date(),
+      },
+    ];
+  }
+  return null;
+}
+
+/** First present_conversation entry whose value is an array of plain objects (Snowflake result set, etc.). */
+function extractAgentTableData(presentConversation: any[]): TableData | null {
+  for (const item of presentConversation) {
+    if (!item || typeof item !== "object") continue;
+    for (const val of Object.values(item)) {
+      if (!Array.isArray(val) || val.length === 0) continue;
+      if (!val.every((x) => x != null && typeof x === "object" && !Array.isArray(x))) continue;
+      const td = tableDataFromObjectRows(val as Record<string, unknown>[]);
+      if (td) return td;
+    }
+  }
+  return null;
+}
+
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000").replace(/\/$/, "");
 
 export async function askAlgo(userInput: string, conversationHistory: any[] = []) {
@@ -25,10 +116,6 @@ export async function askAlgo(userInput: string, conversationHistory: any[] = []
       body: JSON.stringify({
         user_input: userInput,
         conversation_history: conversationHistory,
-        client_hints: {
-          prefer_table: wantsTabularQuery(userInput),
-          prefer_visualization: wantsVisualization(userInput),
-        },
       }),
     });
 
@@ -65,7 +152,7 @@ export async function askAlgo(userInput: string, conversationHistory: any[] = []
 
 export function transformApiResponseToCharts(apiResponse: any, userInput: string = ""): Message[] | null {
   // Handle API-level errors returned from askAlgo
-  if (apiResponse?.error) {
+  if (hasMeaningfulApiError(apiResponse)) {
     const errorMessage = apiResponse.message || apiResponse.details || 'Sorry, failed to process request from server.';
     return [{
       id: Date.now().toString(),
@@ -89,17 +176,31 @@ export function transformApiResponseToCharts(apiResponse: any, userInput: string
     }];
   }
 
-  const graphData = apiResponse.conversation.present_conversation.find(
-    (item: any) => item.graph_and_summary_agent
+  const presentConversation: any[] = Array.isArray(apiResponse?.conversation?.present_conversation)
+    ? apiResponse.conversation.present_conversation
+    : [];
+
+  const graphDataCandidate = presentConversation.find(
+    (item: any) => item?.graph_and_summary_agent
   )?.graph_and_summary_agent;
 
+  const graphOut = graphDataCandidate?.graph_output;
+  const graphData =
+    graphOut?.parameters != null &&
+    typeof graphOut.function_name === "string" &&
+    graphOut.function_name.length > 0 &&
+    Array.isArray(graphOut.parameters.data)
+      ? graphDataCandidate
+      : undefined;
+
   // Extract insightful questions from present_conversation
-  const insightfulQuestions = apiResponse.conversation.present_conversation.find(
-    (item: any) => item.insightful_questions
+  const insightfulQuestions = presentConversation.find(
+    (item: any) => item?.insightful_questions
   )?.insightful_questions;
 
   const preferViz = wantsVisualization(userInput);
-  const ellisResponseEarly = apiResponse?.conversation?.present_conversation?.find((item: any) => item.ellis_response)?.ellis_response;
+  const ellisRawEarly = presentConversation.find((item: any) => item?.ellis_response)?.ellis_response;
+  const ellisResponseEarly = normalizeEllisText(ellisRawEarly);
   const preferTable = wantsTabularDisplay(userInput, ellisResponseEarly);
 
   if (!graphData) {
@@ -163,12 +264,39 @@ export function transformApiResponseToCharts(apiResponse: any, userInput: string
         }];
       }
 
+      const agentTableWithEllis = extractAgentTableData(presentConversation);
+      if (preferTable && agentTableWithEllis) {
+        const textOnly = tableFromMd ? stripFirstMarkdownTable(ellisResponse) : ellisResponse;
+        return [{
+          id: Date.now().toString(),
+          content: (textOnly && textOnly.trim()) || ellisResponse,
+          type: MessageType.DATA_TABLE,
+          role: "assistant",
+          timestamp: new Date(),
+          tableData: agentTableWithEllis,
+          insightful_questions: insightfulQuestions,
+        }];
+      }
+
       return [{
         id: Date.now().toString(),
         content: ellisResponse,
         type: MessageType.TEXT,
         role: "assistant",
         timestamp: new Date(),
+        insightful_questions: insightfulQuestions,
+      }];
+    }
+
+    const agentTableOnly = extractAgentTableData(presentConversation);
+    if (agentTableOnly && (preferTable || wantsTabularQuery(userInput))) {
+      return [{
+        id: Date.now().toString(),
+        content: "",
+        type: MessageType.DATA_TABLE,
+        role: "assistant",
+        timestamp: new Date(),
+        tableData: agentTableOnly,
         insightful_questions: insightfulQuestions,
       }];
     }

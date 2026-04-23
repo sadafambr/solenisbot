@@ -18,7 +18,7 @@ import json
 import yaml
  
 # Local application imports
-from connectors.snowflake_connector_v2 import SnowflakeConnector
+from connectors.snowflake_connector import SnowflakeConnector
  
 # -----------------------------------------------------------------------------
 # SECTION: Static Query Handling Functions

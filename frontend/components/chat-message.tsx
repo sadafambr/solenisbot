@@ -12,6 +12,15 @@ const userBubble = "max-w-[min(100%,32rem)] rounded-xl bg-black px-5 py-4 text-w
 const assistantBubble =
   "w-full max-w-full rounded-xl bg-[#EBE6DC] px-5 py-4 text-black shadow-sm"
 
+function resolveAssistantMessageType(message: Message): MessageType {
+  const raw = (message.chartType || message.graph_type || "").trim()
+  if (raw) {
+    const key = raw.toUpperCase().replace(/-/g, "_") as keyof typeof MessageType
+    if (MessageType[key] != null) return MessageType[key]
+  }
+  return message.type
+}
+
 function safeFormatDistance(timestamp: Date | string | number | undefined) {
   if (timestamp == null) return ""
   const d = timestamp instanceof Date ? timestamp : new Date(timestamp)
@@ -109,9 +118,7 @@ export default function ChatMessage({ message, onQuestionClick }: ChatMessagePro
     )
   }
 
-  const messageType = message.chartType
-    ? MessageType[message.chartType.toUpperCase().replace("-", "_") as keyof typeof MessageType]
-    : message.type
+  const messageType = resolveAssistantMessageType(message)
 
   const getProcessedInsightfulQuestions = () => {
     const raw = message.insightful_questions
@@ -159,8 +166,10 @@ export default function ChatMessage({ message, onQuestionClick }: ChatMessagePro
             messageType !== MessageType.DATA_TABLE &&
             (messageType === MessageType.BAR_CHART ||
               messageType === MessageType.LINE_CHART ||
-              messageType === MessageType.PIE_CHART) &&
-            message.chartData && (
+              messageType === MessageType.PIE_CHART ||
+              messageType === MessageType.AREA_CHART ||
+              messageType === MessageType.SCATTER_CHART) &&
+            (message.chartData || message.response_graph || message.scatterData) && (
               <div className={cn("space-y-3", message.content && "border-t border-black/10 pt-4")}>
                 {renderChart(message)}
                 <div className="flex justify-end">

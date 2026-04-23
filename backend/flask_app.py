@@ -19,11 +19,15 @@ from static.static_user_queries_handler import (
     is_user_input_in_static_queries,
 )
 from utils.chat_history_handler import (
+    conversation_history_for_workflow,
     create_new_chat_session,
+    ensure_sqlite_chat_schema,
     get_chat_history,
+    get_chat_storage_backend,
     get_user_chat_sessions,
     refresh_chat_session_title,
     save_chat_message,
+    soft_delete_chat_session,
 )
 from utils.flask_api_validations import validate_ask_ellis_api_request_data
 from workflows.core_engine_workflow_graph import ask_ellis_workflow_graph
@@ -33,18 +37,20 @@ app = Flask(__name__)
 
 logger = logging.getLogger(__name__)
 
-_frontend_origins = os.getenv(
+_raw_origins = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080",
 ).split(",")
+_frontend_origins = [o.strip() for o in _raw_origins if o and o.strip()]
 logger.info("Configured CORS origins: %s", _frontend_origins)
+# Explicit headers only — wildcard allow_headers breaks credentialed CORS in several browsers.
 CORS(
     app,
     resources={r"/*": {"origins": _frontend_origins}},
     supports_credentials=True,
-    methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "*"],
-    expose_headers=["*"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    expose_headers=["Content-Type"],
 )
 
 load_dotenv()
@@ -60,6 +66,11 @@ app.config["TOKEN_EXPIRY_SECONDS"] = EXP_TIME
 logger = logging.getLogger(__name__)
 
 initialize_database()
+ensure_sqlite_chat_schema()
+logger.info(
+    "Chat persistence: %s (set CHAT_STORAGE=snowflake to use Snowflake CHAT_SESSIONS/CHAT_HISTORY)",
+    get_chat_storage_backend(),
+)
 
 
 def _process_ask_request():
@@ -71,7 +82,13 @@ def _process_ask_request():
 
     user_input = data.get("user_input")
     conversation_history = data.get("conversation_history") or []
-    logger.info("Received ask request: user_input present=%s history_len=%s", bool(user_input), len(conversation_history) if isinstance(conversation_history, list) else 0)
+    chat_id_ctx = data.get("chat_id")
+    logger.info(
+        "Received ask request: user_input present=%s history_len=%s chat_id=%s",
+        bool(user_input),
+        len(conversation_history) if isinstance(conversation_history, list) else 0,
+        chat_id_ctx,
+    )
 
     # Force history trimming at request layer too to prevent token state explosion
     if isinstance(conversation_history, list):
@@ -79,9 +96,13 @@ def _process_ask_request():
 
     if is_user_input_in_static_queries(user_input):
         ellis_response = execute_static_query_for_user_input(user_input, conversation_history)
+        if chat_id_ctx and isinstance(ellis_response, dict):
+            ellis_response = {**ellis_response, "chat_id": chat_id_ctx}
         return jsonify(ellis_response), 200
 
-    ellis_response = ask_ellis_workflow_graph(user_input, conversation_history)
+    ellis_response = ask_ellis_workflow_graph(
+        user_input, conversation_history, chat_id=str(chat_id_ctx) if chat_id_ctx else None
+    )
 
     error_msg = ""
     if isinstance(ellis_response, dict):
@@ -262,6 +283,165 @@ def route_save_chat_message():
         return jsonify({"error": "Failed to save message due to a database error."}), 500
     logger.error("save_message unexpected status=%s user_id=%s chat_id=%s", save_status, user_id, chat_id)
     return jsonify({"error": "Failed to save message."}), 500
+
+
+# --- REST-style chat API (session list, load, send with server-assembled history) ---
+
+
+@app.route("/api/chat/new", methods=["POST"])
+def api_chat_new():
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    if user_id is None or user_id == "":
+        return jsonify({"error": "Missing user_id"}), 400
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "user_id must be an integer"}), 400
+    title = (data.get("title") or "Untitled Chat").strip() or "Untitled Chat"
+    chat_id = create_new_chat_session(uid, title)
+    if not chat_id:
+        logger.error(
+            "create_new_chat_session returned None for user_id=%s (check CHAT_STORAGE / DB connectivity)",
+            uid,
+        )
+        return jsonify({"error": "Failed to create session"}), 500
+    return jsonify({"chat_id": chat_id, "title": title}), 201
+
+
+@app.route("/api/chat/list", methods=["GET"])
+def api_chat_list():
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+    try:
+        sessions = get_user_chat_sessions(user_id)
+    except Exception as e:
+        logger.exception("api_chat_list failed user_id=%s", user_id)
+        return (
+            jsonify(
+                {
+                    "error": "Chat list failed",
+                    "details": str(e),
+                    "backend": get_chat_storage_backend(),
+                }
+            ),
+            500,
+        )
+    if sessions is None:
+        logger.error(
+            "get_user_chat_sessions returned None (storage=%s). "
+            "If using Snowflake, check CHAT_SESSIONS/CHAT_HISTORY; for local dev set CHAT_STORAGE=sqlite.",
+            get_chat_storage_backend(),
+        )
+        return (
+            jsonify(
+                {
+                    "error": "Database error",
+                    "backend": get_chat_storage_backend(),
+                    "hint": "Local: unset CHAT_STORAGE or set CHAT_STORAGE=sqlite, then restart Flask. "
+                    "Snowflake: set CHAT_STORAGE=snowflake only after tables exist.",
+                }
+            ),
+            500,
+        )
+    out = []
+    for s in sessions:
+        cid = s["chat_id"]
+        out.append(
+            {
+                "id": cid,
+                "chat_id": cid,
+                "title": s.get("title"),
+                "created_at": s.get("created_at"),
+                "updated_at": s.get("updated_at") or s.get("created_at"),
+                "message_count": s.get("message_count", 0),
+            }
+        )
+    return jsonify(out), 200
+
+
+@app.route("/api/chat/<string:chat_id>", methods=["GET", "DELETE"])
+def api_chat_get_or_delete(chat_id):
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    if request.method == "DELETE":
+        if soft_delete_chat_session(int(user_id), chat_id):
+            return jsonify({"success": True}), 200
+        return jsonify({"error": "Failed to delete chat"}), 500
+
+    hist = get_chat_history(user_id, chat_id)
+    if not hist:
+        return jsonify({"error": "Not found"}), 404
+    flat = []
+    for item in hist.get("conversation_history") or []:
+        ts = item.get("timestamp")
+        if item.get("question"):
+            flat.append({"role": "user", "content": item["question"], "timestamp": ts})
+        if item.get("response"):
+            flat.append(
+                {
+                    "role": "assistant",
+                    "content": item["response"],
+                    "timestamp": ts,
+                    "graph_type": item.get("graph_type"),
+                    "response_graph": item.get("response_graph"),
+                    "insightful_questions": item.get("insightful_questions"),
+                }
+            )
+    return (
+        jsonify(
+            {
+                "id": chat_id,
+                "chat_id": chat_id,
+                "title": hist.get("title"),
+                "messages": flat,
+                "conversation_history": hist.get("conversation_history"),
+            }
+        ),
+        200,
+    )
+
+
+@app.route("/api/chat/<string:chat_id>/message", methods=["POST"])
+def api_chat_post_message(chat_id):
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    user_input = (data.get("user_input") or "").strip()
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+    if not user_input or len(user_input) > 5000:
+        return jsonify({"error": "user_input must be 1–5000 characters"}), 400
+
+    prior = conversation_history_for_workflow(int(user_id), chat_id)
+    if prior is None:
+        return jsonify({"error": "Chat not found"}), 404
+
+    conversation_history = prior[-20:]
+
+    if is_user_input_in_static_queries(user_input):
+        ellis_response = execute_static_query_for_user_input(user_input, conversation_history)
+        if isinstance(ellis_response, dict):
+            ellis_response = {**ellis_response, "chat_id": chat_id}
+        return jsonify(ellis_response), 200
+
+    ellis_response = ask_ellis_workflow_graph(
+        user_input, conversation_history[-10:], chat_id=chat_id
+    )
+
+    error_msg = ""
+    if isinstance(ellis_response, dict):
+        error_msg = ellis_response.get("error", "")
+        if not error_msg and "conversation" in ellis_response:
+            conv = ellis_response["conversation"]
+            if isinstance(conv, dict) and "error" in conv:
+                error_msg = conv["error"]
+    if error_msg:
+        ellis_response["error"] = error_msg
+
+    return jsonify(ellis_response), 200
 
 
 if __name__ == "__main__":

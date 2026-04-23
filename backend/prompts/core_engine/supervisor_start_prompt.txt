@@ -3,53 +3,28 @@
 user-input: {user_input}
 
 conversation-history: {conversation_history}
-  
 
 
-**Output Format:**
+**Output (strict):**
 
-1.Return your response as a list of dictionaries, maintaining the original sequence of the user's questions/requests. 
-2. If there's only one question/request, the list will contain a single dictionary.
-3. Output only the list of dictionaries, without any additional text or explanation.
+1. Return **one JSON object only** — no markdown, no backticks, no `//` comments, no text before or after the JSON.
+2. The object must be: `{{"tasks": [ task1, task2, ... ]}}`  
+   If there is a single user request, `tasks` has **one** element.
+3. Each task is an object with exactly these keys (valid JSON only):
 
-[
-    {{
-  "question": "Rephrased user question/request incorporating context",
-  "function_name": "[function_name]",
-  "function_params": {{
-    "param1": "Value based on context",
-    "param2": "Another value if required, based on context",
-    // Add more parameters as needed, depending on the input
-    }},
-  "depends_on": "Index of the question this depends on, if any"
-}},
+| key | type | rules |
+|-----|------|--------|
+| `question` | string | The user’s request, rephrased if needed for clarity. |
+| `function_name` | string | One of: `snowflake_agent`, `generic_conversation_agent`, `human_agent`. |
+| `function_params` | **array of strings** | For `snowflake_agent` and `generic_conversation_agent` use **one** string: the full user question to send to the tool. For `human_agent` you may use multiple strings if the prompt requires it. **Never** use an object/dictionary for `function_params`. |
+| `depends_on` | null or number | 1-based index of a **previous** task in this `tasks` array that this task depends on, or `null` if none. |
 
-{{
-  "question": "Rephrased user question/request incorporating context",
-  "function_name": "[function_name]",
-  "function_params": {{
-    "param1": "Value based on context",
-    "param2": "Another value if required, based on context",
-    // Add more parameters as needed, depending on the input
-    }},
-  "depends_on": "Index of the question this depends on, if any"
-}},
+**Example (format only):**
 
-{{
-  "question": "Rephrased user question/request incorporating context",
-  "function_name": "[function_name]",
-  "function_params": {{
-    "param1": "Value based on context",
-    "param2": "Another value if required, based on context",
-    // Add more parameters as needed, depending on the input
-    }},
-  "depends_on": "Index of the question this depends on, if any"
-}}
+`{{"tasks":[{{"question":"Show revenue by region.","function_name":"snowflake_agent","function_params":["Show revenue by region."],"depends_on":null}}]}}`
 
-]
+**Function selection (reminder):** Use `snowflake_agent` for data/list/table/SQL/REGION/LINEITEM-style questions. Use `generic_conversation_agent` for general chat. Use `human_agent` only if the request is too ambiguous to route otherwise.
 
-
-Note: At times, the user's input might have to be rephrased before giving it as function_params because the user input might not contain the full context of the question needed by the function. 
-So based on the conversation-history, you must rephrase the user input if needed and then provide it as function_params.
-Only include the user's name in the function_params if it's directly relevant to the query or necessary for the function to execute correctly. 
-In most cases, the user's name should not be included in the function_params unless explicitly required by the context or the nature of the query.
+**Notes:**  
+- Rephrase the user in `function_params[0]` when the conversation context makes the phrasing clearer.  
+- Do **not** put the assistant’s prior answers or large table data inside `function_params` — only the **question to run** for this turn.

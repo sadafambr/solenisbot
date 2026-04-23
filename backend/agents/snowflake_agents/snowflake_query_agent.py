@@ -25,9 +25,9 @@ from langchain_core.pydantic_v1 import BaseModel, Field
 
 # Local application imports
 from agents.snowflake_agents.snowflake_table_identification_agent import snowflake_table_identification_agent
-from connectors.snowflake_connector_v2 import SnowflakeConnector
+from connectors.snowflake_connector import SnowflakeConnector
 from models.azure_openai_model import model
-from utils.helper_functions import load_prompt, load_dynamic_example_prompt
+from utils.prompt_loader import load_dynamic_example_prompt, load_prompt
 
 # -----------------------------------------------------------------------------
 # SECTION: Logger Setup

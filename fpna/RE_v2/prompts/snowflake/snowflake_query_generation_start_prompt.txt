@@ -1,0 +1,11 @@
+
+
+user_input: {user_input}
+
+Your response must be a single valid JSON object in this format (no extra text, no explanation):
+{{
+	"ai_response": "<SQL query as a single-line string>"
+}}
+
+Do not include any other text, markdown, or explanation. Only output the JSON object as shown above.
+

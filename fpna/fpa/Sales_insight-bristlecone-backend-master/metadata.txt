@@ -1,0 +1,410 @@
+**Table Structure**
+
+vw_budget (
+    Department : STRING,
+    Account_Name : STRING,
+    Commercial_BU_Name : STRING,
+    Client_partner : STRING,
+    Account_Category_Type : STRING,
+    Type : STRING,
+    Fiscal Year : STRING,
+    April : FLOAT,
+    May : FLOAT,
+    June : FLOAT,
+    July : FLOAT,
+    August : FLOAT,
+    September : FLOAT,
+    October : FLOAT,
+    November : FLOAT,
+    December : FLOAT,
+    January : FLOAT,
+    February : FLOAT,
+    March : FLOAT
+)
+
+# vw_budget Table Metadata
+
+This document provides detailed information about the columns in the `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_budget` table to help generate accurate queries.
+
+## Column Definitions and Sample Values
+
+- `Department` (STRING): The department within the organization to which the budget allocation is assigned.
+  - Sample values: SAP, Integration, Solutions & Consulting, Emerging Platforms, AI, Analytics & BI, Data & Cloud, Kinaxis
+- `Account_Name` (STRING): The name of the account associated with the budget entries.
+  - Sample values: ABB, Adexa Inc, Agilent, Al Rawabi Dairy, Aldar Properties, Alpek Polyester USA LLC, Amgen, Amit M - LS - New Logos, Amit M - RCG - New Logos, Aptar
+- `Commercial_BU_Name` (STRING): The business unit name associated with commercial operations across different regions and industries.
+  - Sample values: India, Technology, Life Sciences, ROW, Manufacturing, RCG, Europe, RoW, Hi-Tech, Europe-SAP
+- `Client_partner` (STRING): The primary point of contact or partner associated with each budget entry.
+  - Sample values: Shaji Kutty, Manish Nair, Rajesh Raghuvanshi, Abhay Bhatt, Sachin Shetty, Amit Maheshwari, Srinivas Nair, Madhusudan Hirlekar, Satchith Nair, Robert Fernandez
+- `Account_Category_Type` (STRING): The type of account category related to agricultural activities.
+  - Sample values: Farming, Hunting
+- `Type` (STRING): The type of budget transaction, indicating whether it is a renewal or a new deal.
+  - Sample values: Renewal, New Deal
+- `Fiscal Year` (STRING): The fiscal year associated with the budget record.
+  - Sample values: FY26, FY25
+- `April` (FLOAT): The estimated budget amount for the month of April.
+  - Sample values: 96150.2344459891, 0.0, 3935.88842120918, 1849.76555401092, 24756.4155307495, 10955.0268583057, 125171.13293365, 1126.21257006591, 25249.9215415167, 10315.93445684
+- `May` (FLOAT): The estimated budget allocation for the month of May in a financial dataset.
+  - Sample values: 96150.2344459891, 0.0, 1965.64195218762, 1849.76555401092, 12363.7267486563, 5471.10539617692, 14355.1262093627, 36000.0, 562.447518296894, 12610.1910826534
+- `June` (FLOAT): The column `June` in the `vw_budget` table represents the budget amounts allocated for the month of June.
+  - Sample values: 96150.2344459891, 0.0, 7294.07443815404, 1849.76555401092, 93848.7518004433, 45879.1302949802, 33351.9953215234, 20302.0951879296, 162799.252878033, 84123.0122839202
+- `July` (FLOAT): The July column in the vw_budget table represents the budget amounts allocated for the month of July.
+  - Sample values: 96150.2344459891, 0.0, 221.436700516086, 1849.76555401092, 26281.1736620074, 11629.7516083246, 11634.9964937996, 2495.86464438867, 39346.2082066986, 19684.5293462706
+- `August` (FLOAT): The column `August` represents the budget amounts allocated for the month of August in floating-point format.
+  - Sample values: 96150.2344459891, 0.0, 41.1184975525317, 1849.76555401092, 4880.14124298428, 2159.52419779082, 44990.4782068476, 463.456166175537, 995.986466177278, 3655.21284349414
+- `September` (FLOAT): The budget allocated for the month of September in floating-point format.
+  - Sample values: 96150.2344459891, 0.0, 911.314602496895, 1849.76555401092, 93848.7518004433, 108159.204292354, 33351.9953215234, 47861.8153150637, 162799.252878033, 167023.796726285
+- `October` (FLOAT): The financial budget amount allocated for the month of October.
+  - Sample values: 96150.2344459891, 0.0, 747.604102569073, 1849.76555401092, 5517.84756753433, 2441.71730868282, 13608.3850048839, 301.151389440667, 35380.667441328, 7512.15548245374
+- `November` (FLOAT): The column `November` represents the financial budget amounts for the month of November in float format.
+  - Sample values: 123621.730001986, 0.0, 238.620120528641, 2378.26999801404, 1761.18542835586, 779.346818045226, 30482.78241094, 96.1214372670732, 11292.7940071777, 2397.72821001525
+- `December` (FLOAT): The financial budget amount for the month of December.
+  - Sample values: 156979.974605696, 0.0, 16724.9915838133, 3020.02539430354, 210350.650587201, 123442.278888845, 74754.4722723801, 54624.7690421126, 364894.877140419, 179558.104011108
+- `January` (FLOAT): The budget amount allocated for the month of January.
+  - Sample values: 201130.592463549, 0.0, 52436.0654670238, 6933.79595861443, 3869.40753645141, 27475.3831448427, 12158.2044024157, 62842.158499703, 1225.12131271818, 30425.5121580137
+- `February` (FLOAT): The estimated budget expenditure for the month of February.
+  - Sample values: 201130.592463549, 0.0, 737.233945505735, 3869.40753645141, 2921.31254525722, 1292.71773432013, 130.260686136325, 3234.98420002071, 17.5262412139985, 133.541349121063
+- `March` (FLOAT): The estimated budget allocation for the month of March in monetary values.
+  - Sample values: 201130.592463549, 0.0, 1347185.3612073, 17847.4809225045, 3869.40753645141, 93848.7518004433, 70721.2008318273, 33351.9953215234, 31295.0254693371, 162799.252878033
+
+
+**Table Structure**
+
+vw_opportunity (
+    Amount_converted_Currency : STRING,
+    Amount_converted : FLOAT,
+    Fiscal_Period : STRING,
+    Opportunity_Name : STRING,
+    Opportunity_Owner : STRING,
+    Stage : STRING,
+    Type : STRING,
+    Close_Date : DATE,
+    Department : STRING,
+    Sub_Department : STRING,
+    Sales_Type : STRING,
+    Account_Owner : STRING,
+    Age : FLOAT,
+    Stage_Duration : FLOAT,
+    Created_Date : TIMESTAMP,
+    Fiscal_Year : INTEGER,
+    Client_Partner : STRING,
+    Delivery_Partner : STRING,
+    Account_Category_New : STRING,
+    BO_I_Forecast : STRING,
+    Total_Studio : FLOAT,
+    SC_platform : FLOAT,
+    SAP_Studio : FLOAT,
+    Integration : FLOAT,
+    Kinaxis_Studio : FLOAT,
+    Emerging_Platforms : FLOAT,
+    SC_Build_Enablement1 : FLOAT,
+    AI : FLOAT,
+    Analytics_BI : FLOAT,
+    Experience : FLOAT,
+    Data_Cloud : FLOAT,
+    Solution_Consulting1 : FLOAT,
+    Sub_segments : STRING,
+    Net_New_and_Renewal_Sub_Type : STRING,
+    First_Opportunity_Closed_on : DATE,
+    Customer_Type : STRING,
+    New_or_Existing_Customer : STRING,
+    Customer_Tenure : FLOAT,
+    First_Opportunity_Close_Date : DATE,
+    Last_Opportunity_Closed_on : STRING,
+    Movement_to_Farming_date_2_CL_Year : DATE,
+    Total_Age : FLOAT,
+    Account_Created_Date : INTEGER,
+    First_Opportunity_Created_Date : DATE,
+    Last_Stage_Change_Date : TIMESTAMP,
+    Deal_Type : STRING,
+    Region2 : STRING,
+    Micro_vertical : STRING,
+    Commercial_BU : STRING,
+    Account : STRING,
+    Sales_Forecast_Category : STRING,
+    Opportunity_Status : STRING
+)
+
+# vw_opportunity Table Metadata
+
+This document provides detailed information about the columns in the `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opportunity` table to help generate accurate queries.
+
+## Column Definitions and Sample Values
+
+- `Amount_converted_Currency` (STRING): The currency in which the opportunity amount is converted, represented as a string value.
+  - Sample values: USD
+- `Amount_converted` (FLOAT): The converted amount in a currency for each opportunity.
+  - Sample values: 46020.4, 19976.67838941515, 49941.69597353787, 304359.7285358925, 158411.02, 24840.0, 336000.0, 177408.0, 311200.0, 846749.95
+- `Fiscal_Period` (STRING): The fiscal period in which the opportunity falls within the year.
+  - Sample values: Q2, Q4, Q1, Q3
+- `Opportunity_Name` (STRING): The name or title of the opportunities within the company, including project names and fiscal year details.
+  - Sample values: Supernal Doc.ai Implementation, M&M : FY 26 |Auto Div| : Vihaan Project (Analytics), M&M: FY25 |GTO| :  Indirect Spend Dashboard, M&M : FY25 : |Auto Div| : Vihaan Data lake support, M&M : FY 26 |GTO| : M&M AI use case, M&M : FY 26 |GTO| : Java Apps Security, M&M : FY 26 |Auto Div| : I&A - Auto Division Data Science Projects, M&M : FY 26 |GTO| : Harmony Analytics and Custom Application Support, M&M : FY 26 |Farm Div| : Farm Division Support (Analytics & Custom Application Support), M&M : FY 26 |EV Div| : Last Mile Mobility Nemo Analytics
+- `Opportunity_Owner` (STRING): The individual responsible for managing each sales opportunity.
+  - Sample values: 005VK000006zJdNYAU, 005VK000000qjdlYAA, 0052E00000MxfkgQAB, 0052E00000KrY3AQAV, 005VK000009Pb8rYAC, 0052E00000FixeiQAB, 00580000003zcmSAAQ, 0052E00000MmyuYQAR, 00580000003BSAlAAO, 0052E00000NjFyPQAV
+- `Stage` (STRING): The current stage of progress for each opportunity within the sales pipeline.
+  - Sample values: Stage 2:Plan & Strategize, Stage 6:Deploy, Stage 5:Negotiate & Contract, Stage 3:Differentiated Solutioning, Stage 4:Manage Crucible, Stage 5: Negotiate & Contract
+- `Type` (STRING): The type of opportunity, indicating whether it is a new deal or a renewal.
+  - Sample values: New Deal, Renewal
+- `Close_Date` (DATE): The date when the opportunities are expected to be closed.
+  - Sample values: 2025-09-30, 2025-03-19, 2024-09-30, 2025-03-26, 2025-09-16, 2025-03-20, 2025-03-31, 2025-04-28, 2024-12-31, 2025-04-30
+- `Department` (STRING): The department within the organization to which the opportunity is assigned.
+  - Sample values: Data & Cloud, B&E - AI, SAP, Analytics & AI, Capabilities - SC B&E, Capabilities - Emerging Platforms, Modern Engineering, Kinaxis - Dept, Capabilities - Solutions & Consulting, Integration
+- `Sub_Department` (STRING): The specific sub-department within the organization where the opportunity is related to.
+  - Sample values: AI, Data Services, SAP ET - Analytics, Cloud Development, Data Science/Analytics, Digital Execution & Logistics, SAP Procurement, SAP Planning, Digital Planning, Procurement & Technology, OCM
+- `Sales_Type` (STRING): The type of sales method used for the opportunity, either direct sales or channel sales.
+  - Sample values: Direct Sales, Channel Sales
+- `Account_Owner` (STRING): The primary account owner responsible for managing the opportunities within the database.
+  - Sample values: Peter Hornack, Shaji Kutty, Ashok Yaraganal, Robert Fernandez, Rajesh Raghuvanshi, Sachin Shetty, Vivek Mangal, Madhu Narasimhan, Satchith Nair, Victor Gynamani
+- `Age` (FLOAT): The estimated age of individuals associated with opportunities in the database.
+  - Sample values: 405.0, 139.0, 104.0, 37.0, 105.0, 146.0, 138.0, 147.0, 49.0, 89.0
+- `Stage_Duration` (FLOAT): The duration in days of each stage in the opportunity pipeline.
+  - Sample values: 54.0, -141.0, -311.0, -134.0, 40.0, -138.0, -140.0, -129.0, -102.0, -219.0
+- `Created_Date` (TIMESTAMP): The date and time when the opportunities were created.
+  - Sample values: 2024-08-21 20:23:31+00:00, 2024-10-31 16:59:37+00:00, 2024-06-18 10:44:58+00:00, 2025-02-18 06:28:23+00:00, 2025-06-03 13:06:56+00:00, 2025-06-03 13:04:27+00:00, 2024-10-31 16:23:37+00:00, 2024-11-01 14:13:28+00:00, 2024-11-01 09:04:54+00:00, 2024-11-04 11:12:49+00:00
+- `Fiscal_Year` (INTEGER): The fiscal year in which the opportunity is associated.
+  - Sample values: 2026, 2025, 2024, 2027, 2029, 2028
+- `Client_Partner` (STRING): The primary contact person representing the client or partner associated with the opportunity.
+  - Sample values: Peter Hornack, Nikhil Dhami, Ashok Yaraganal, Robert Fernandez, Rajesh Raghuvanshi, Sachin Shetty, Madhu Narasimhan, Satchith Nair, Madhusudan Hirlekar, Sandeep Patnaik
+- `Delivery_Partner` (STRING): The primary delivery partners associated with opportunities.
+  - Sample values: Abhijit Deshpande, Naganand Karnad, Manish Hadiyel, Ranjith Aravindan, Kedar Patil, Mudit Dewan, Shrikant Vaitla, Vishal Wankhede, Anand Shrivastava, Ankur Garg
+- `Account_Category_New` (STRING): The new category classification of accounts, such as "Farming" or "Hunting".
+  - Sample values: Farming, Hunting
+- `BO_I_Forecast` (STRING): The forecasted business opportunity's color category.
+  - Sample values: Red, Green
+- `Total_Studio` (FLOAT): The total amount in studio units for each opportunity.
+  - Sample values: 100.0, 99.99, 100.01, 0.0, 99.0, 18.0, 72.99, 90.0, 85.01, 10.0
+- `SC_platform` (FLOAT): The percentage of platform usage for each opportunity in the dataset.
+  - Sample values: 0.0, 46.52, 3.89, 61.07, 12.73, 99.0, 86.28, 26.2, 89.3, 100.0
+- `SAP_Studio` (FLOAT): The SAP Studio rating score associated with each opportunity.
+  - Sample values: 0.0, 31.250736, 3.89, 61.065475, 75.0, 61.61, 26.2, 89.3, 100.0, 91.57
+- `Integration` (FLOAT): The percentage of integration completion for each opportunity.
+  - Sample values: 0.0, 24.67, 100.0, 30.0, 90.0, 99.0, 10.0, 53.155894, 5.33, 2.0
+- `Kinaxis_Studio` (FLOAT): The efficiency score achieved in Kinaxis Studio projects, stored as floating-point numbers.
+  - Sample values: 0.0, 24.0, 100.0, 99.991305, 56.7, 84.23359, 76.185387, 86.07, 60.3, 59.238095
+- `Emerging_Platforms` (FLOAT): The column `Emerging_Platforms` likely represents the percentage of usage or adoption of various emerging platforms, stored as floating-point numbers.
+  - Sample values: 0.0, 15.266267, 12.73, 99.999199, 0.008694, 100.0, 19.222566, 43.3, 22.31254, 20.326685
+- `SC_Build_Enablement1` (FLOAT): The percentage of completion for a specific building enablement task.
+  - Sample values: 100.0, 53.48, 88.87, 38.93, 87.26, 89.08, 84.96, 87.1, 1.0, 100.01
+- `AI` (FLOAT): The column `AI` likely represents the numerical values associated with artificial intelligence metrics or scores.
+  - Sample values: 48.9, 32.690523, 35.47, 38.934524, 72.943517, 73.44, 6.650238, 73.936166, 8.992437, 46.277226
+- `Analytics_BI` (FLOAT): The column `Analytics_BI` likely represents numerical values related to analytics or business intelligence metrics.
+  - Sample values: 0.0, 20.792472, 27.056482, 13.82, 23.254542, 26.063833, 50.0, 0.55, 100.0, 8.76
+- `Experience` (FLOAT): The numerical value representing the level of experience in a specific field for each opportunity.
+  - Sample values: 0.0, 10.4, 11.070478, 67.89485, 27.008714, 100.0, 27.85, 11.07, 38.57, 16.02413727
+- `Data_Cloud` (FLOAT): The numerical data representing various cloud storage capacities in gigabytes.
+  - Sample values: 51.1, 53.4, 0.0, 70.095219, 91.007562, 53.722773, 84.04, 62.31884, 21.32, 45.45
+- `Solution_Consulting1` (FLOAT): The numerical value representing the level of solution consulting engagement for each opportunity.
+  - Sample values: 0.0, 7.24, 10.92, 15.04, 12.9, 12.53, 10.7, 100.0, 8.43, 18.92
+- `Sub_segments` (STRING): The sub-segments within different industries or regions that opportunities belong to.
+  - Sample values: Discrete Manufacturing Transportation or Automotive, India - M&M, Europe, Life Sciences - Central, Life Sciences - West, Consumer Products, Platform, Communications/media, Process Manufacturing, Energy & Utilities, Others
+- `Net_New_and_Renewal_Sub_Type` (STRING): The type of opportunity indicating whether it is a new deal, renewal, change request, or expansion.
+  - Sample values: New Deal, Recurring Deal, TCV Renewal, Change Request, New Logo, Extension, Expansion
+- `First_Opportunity_Closed_on` (DATE): The date when the first opportunity was closed.
+  - Sample values: 2021-11-05, 2007-04-01, 2007-04-15, 2023-05-11, 2019-02-07, 2015-12-28, 2024-09-04, 2021-08-25, 2018-01-12, 2025-02-19
+- `Customer_Type` (STRING): The type of customer status associated with each opportunity record.
+  - Sample values: Active Customer, Net New Customer, Dormant Customer
+- `New_or_Existing_Customer` (STRING): The indication of whether a customer is new or existing in the opportunity record.
+  - Sample values: 0012E00001r3WvEQAU, 0013000000FEnkXAAT, 0013000000Ho5ErAAJ, 0013000000JLkymAAD, 00180000016b39pAAA, 0018000001LYeCfAAL, 0018000001QrnzgAAB, 0018000001XATrBAAX, 0018000001Yja7OAAR, 001VK000008p1jiYAA
+- `Customer_Tenure` (FLOAT): The length of time in years that a customer has been associated with the company.
+  - Sample values: 0.0, 18.4, 18.3, 6.5, 9.6, 0.9, 4.0, 0.5, 4.2, 3.8
+- `First_Opportunity_Close_Date` (DATE): The date when the first opportunity was closed.
+  - Sample values: 2021-11-05, 2007-04-01, 2007-04-15, 2023-05-11, 2019-02-07, 2015-12-28, 2024-09-04, 2021-08-25, 2018-01-12, 2025-02-19
+- `Last_Opportunity_Closed_on` (STRING): The date when the last opportunity was closed in the system.
+  - Sample values: 0012E00001r3WvEQAU, 0013000000FEnkXAAT, 0013000000Ho5ErAAJ, 0013000000JLkymAAD, 00180000016b39pAAA, 0018000001LYeCfAAL, 0018000001QrnzgAAB, 0018000001XATrBAAX, 0018000001Yja7OAAR, 001VK000008p1jiYAA
+- `Movement_to_Farming_date_2_CL_Year` (DATE): The year when the movement to farming occurred for each opportunity in the dataset.
+  - Sample values: 2023-11-05, 2009-04-01, 2009-04-15, 2025-05-11, 2021-02-07, 2017-12-28, 2026-09-04, 2023-08-25, 2020-01-12, 2027-02-19
+- `Total_Age` (FLOAT): The total age of individuals in years as a floating-point number.
+  - Sample values: 405.0, 139.0, 104.0, 37.0, 105.0, 146.0, 138.0, 147.0, 49.0, 89.0
+- `Account_Created_Date` (INTEGER): [LLM description generation skipped: No sample values found]
+  - Sample values: [No sample values available]
+- `First_Opportunity_Created_Date` (DATE): The date when the first opportunity was created in the system.
+  - Sample values: 2021-08-06, 2007-06-21, 2006-07-20, 2012-06-13, 2013-12-11, 2015-12-28, 2024-06-20, 2021-07-09, 2017-11-27, 2024-07-05
+- `Last_Stage_Change_Date` (TIMESTAMP): The date and time when the last stage of an opportunity was changed.
+  - Sample values: 2025-03-19 05:47:24+00:00, 2024-08-22 09:07:21+00:00, 2025-03-26 05:57:26+00:00, 2025-03-26 07:27:33+00:00, 2025-03-19 05:54:32+00:00, 2025-03-20 06:02:13+00:00, 2025-04-02 11:52:36+00:00, 2025-04-28 11:21:25+00:00, 2024-12-02 08:45:25+00:00, 2025-06-03 07:20:10+00:00
+- `Deal_Type` (STRING): The type of opportunity, whether it is a new deal or a renewal.
+  - Sample values: Net New, Renewals
+- `Region2` (STRING): The geographical region or market segment associated with each opportunity within the database.
+  - Sample values: Industrial, India, Europe-SAP, SC Platform, Consumer, SC Build & Enablement, Life sciences/RCG, Manufacturing/Hi-Tech, North America Sales, Technology
+- `Micro_vertical` (STRING): The specific micro vertical associated with each opportunity record.
+  - Sample values: 0012E00001r3WvEQAU, 0013000000FEnkXAAT, 0013000000Ho5ErAAJ, 0013000000JLkymAAD, 00180000016b39pAAA, 0018000001LYeCfAAL, 0018000001QrnzgAAB, 0018000001XATrBAAX, 0018000001Yja7OAAR, 001VK000008p1jiYAA
+- `Commercial_BU` (STRING): The business unit within the organization to which the opportunity belongs.
+  - Sample values: Manufacturing, India, Europe-SAP, Life Sciences, RCG, Technology, ROW, Europe, Hi-Tech
+- `Account` (STRING): The name of the company or organization associated with the opportunity.
+  - Sample values: Supernal, M&M, SAP, Boston Scientific Corporation, Illumina, Dorman, Lucid Motors, Colgate Palmolive, Google, ROQUETTE
+- `Sales_Forecast_Category` (STRING): The forecasted sales category status of opportunities, such as Possible, Closed, Committed, or Probable.
+  - Sample values: Possible, Closed, Committed, Probable
+- `Opportunity_Status` (STRING): The current status of the opportunities, such as whether they are abandoned, closed, open, or lost.
+  - Sample values: Abandoned, Closed, Open, Lost
+
+
+**Table Structure**
+
+vw_opening_pipeline (
+    Amount_converted_Currency : STRING,
+    Amount_converted : FLOAT,
+    Fiscal_Period : STRING,
+    Opportunity_Name : STRING,
+    Opportunity_Owner : STRING,
+    Stage : STRING,
+    Type : STRING,
+    Close_Date : DATE,
+    Department : STRING,
+    Sub_Department : STRING,
+    Sales_Type : STRING,
+    Customer_Type : STRING,
+    Account_Owner : STRING,
+    Age : INTEGER,
+    Stage_Duration : INTEGER,
+    Created_Date : DATE,
+    Fiscal_Year : INTEGER,
+    Client_Partner : STRING,
+    Account_Category_New : STRING,
+    BO_I_Forecast : STRING,
+    Total_Studio : INTEGER,
+    SC_platform : FLOAT,
+    SAP_Studio : FLOAT,
+    Emerging_Platforms : FLOAT,
+    Kinaxis_Studio : FLOAT,
+    Integration : FLOAT,
+    SC_Build_Enablement1 : FLOAT,
+    Solution_Consulting1 : FLOAT,
+    Commercial_BU : STRING,
+    Account : STRING,
+    Sales_Forecast_Category : STRING,
+    Opportunity_Status : STRING
+)
+
+# vw_opening_pipeline Table Metadata
+
+This document provides detailed information about the columns in the `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_opening_pipeline` table to help generate accurate queries.
+
+## Column Definitions and Sample Values
+
+- `Amount_converted_Currency` (STRING): The currency in which the converted amount is denominated.
+  - Sample values: USD, 1000000, EUR
+- `Amount_converted` (FLOAT): The converted amount in a specific currency for each record in the pipeline.
+  - Sample values: 600000.0, 300000.0, 200000.0, 240000.0, 100000.0, 954525.0, 18000.0, 220000.0, 198016.0, 36000.0
+- `Fiscal_Period` (STRING): The fiscal period in which the data record is associated with, represented in a string format with quarter and year information.
+  - Sample values: Q2-2024, Q3-2024, Q4-2024, Q1-2025, Q1-2024, Q2-2025, Q3-2025, Q4-2025
+- `Opportunity_Name` (STRING): The name of the opportunities within the pipeline for various projects and engagements.
+  - Sample values: Agilent - Analytics Engagements, Demand forecasting product developement, Altra S/4 Assessment, Applied Materials - SAP Process Improvements, SAP IBP S&OP, Carpenter IBP Implementation, Corning: EO Monthly Data Refresh 2023-24, Corning - Ariba SCC Implementation- Phase 2, Corning - Ariba SCC Implementation- Phase 1 Rollout, Dorman- AI enabled NPI forecasting - 2023
+- `Opportunity_Owner` (STRING): The individual responsible for managing the sales opportunities within the pipeline.
+  - Sample values: Kedar Shinde, Vishal Sethi, Ennio Devita, Vivek Mangal, Sachin Shetty, Prakash Narayanan, Aaron Chen, Vineeth Kumar, Srikanth Rao, Eli Farfouris
+- `Stage` (STRING): The current stage of the pipeline process for each record.
+  - Sample values: Stage 2:Plan & Strategize, Stage 3:Differentiated Solutioning, Stage 4:Manage Crucible, Stage 5:Negotiate & Contract, Stage 6:Deploy
+- `Type` (STRING): The type of deal or transaction stage within the opening pipeline process.
+  - Sample values: New Deal, Renewal, TCV Renewal, Reconciliation (for Finance)
+- `Close_Date` (DATE): The date when the sales pipeline opportunities were closed.
+  - Sample values: 2023-07-31, 2023-08-30, 2023-09-30, 2023-07-28, 2023-08-31, 2023-09-29, 2023-09-07, 2023-07-10, 2023-07-19, 2023-09-21
+- `Department` (STRING): The department within the organization to which a project or task is assigned.
+  - Sample values: SAP, Analytics & AI, Solutions and Consulting, Emerging Platforms, CPP, Modern Engineering, Integration, SC Build & Enablement, Data & Cloud, B&E - AI
+- `Sub_Department` (STRING): The sub-department within the organization's technology and data-related divisions.
+  - Sample values: Emerging Technologies, Data Science and Analytics, Digital Execution & Logistics, Solutions and Consulting, Digital Planning, Procurement & Technology, Data Engineering and BI, SC Application, Emerging Platform, Smart Integration (API), S4 HANA
+- `Sales_Type` (STRING): The type of sales channel through which the transactions were made.
+  - Sample values: Direct Sales, Channel Sales
+- `Customer_Type` (STRING): The type of customer status associated with each record in the pipeline.
+  - Sample values: Active Customer, Net New Customer, Dormant Customer
+- `Account_Owner` (STRING): The name of the account owner associated with each record in the pipeline.
+  - Sample values: Kedar Shinde, Vishal Sethi, Ennio Devita, Vivek Mangal, Sachin Shetty, Prakash Narayanan, Aaron Chen, Vineeth Kumar, Srikanth Rao, Eli Farfouris
+- `Age` (INTEGER): The age of individuals associated with the pipeline records.
+  - Sample values: 331, 77, 377, 425, 94, 20, 5, 337, 113, 68
+- `Stage_Duration` (INTEGER): The duration in days of each stage in the pipeline process.
+  - Sample values: 331, 77, 377, 148, 94, 8, 5, 125, 27, 68
+- `Created_Date` (DATE): The date when the pipeline was created.
+  - Sample values: 2022-08-09, 2023-04-19, 2022-06-23, 2022-05-07, 2023-04-03, 2023-06-16, 2023-07-01, 2022-08-02, 2023-03-14, 2023-04-29
+- `Fiscal_Year` (INTEGER): The fiscal year in which the pipeline data was recorded.
+  - Sample values: 2024, 2025
+- `Client_Partner` (STRING): The primary client partner assigned to each opening in the pipeline.
+  - Sample values: Kedar Shinde, Sachin Shetty, TBD (Srikanth Rao), Madhu Narasimhan, Rajesh Raghuvanshi, Ravi Rangasami, Amit Maheshwari, Parul Singh, TBD (Raja Balakrishnan), Narayanan Sarathy
+- `Account_Category_New` (STRING): The new category classification of accounts related to farming and hunting.
+  - Sample values: Farming, Hunting
+- `BO_I_Forecast` (STRING): The forecast status of the business opportunity, indicated by colors such as "Green" and "Red".
+  - Sample values: Green, Red
+- `Total_Studio` (INTEGER): The total number of studio units available in the pipeline.
+  - Sample values: 100
+- `SC_platform` (FLOAT): The percentage completion of a specific platform for opening pipeline opportunities.
+  - Sample values: 85.0, 0.0, 100.0, 94.0, 74.0, 90.0, 80.0, 50.0, 30.0, 70.0
+- `SAP_Studio` (FLOAT): The SAP Studio rating score assigned to each entity.
+  - Sample values: 85.0, 0.0, 100.0, 94.0, 80.0, 70.0, 32.0, 65.0, 97.0, 23.0
+- `Emerging_Platforms` (FLOAT): The percentage completion of projects in emerging platforms.
+  - Sample values: 0.0, 74.0, 100.0, 94.0, 17.0, 50.0, 90.0, 9.0, 86.07, 66.0
+- `Kinaxis_Studio` (FLOAT): The column `Kinaxis_Studio` likely represents the percentage completion of tasks in a studio project.
+  - Sample values: 0.0, 100.0, 28.24, 20.24, 97.9, 59.24, 56.7, 6.53, 19.29, 51.79
+- `Integration` (FLOAT): The percentage of integration completion for each record in the pipeline.
+  - Sample values: 0.0, 100.0, 90.0, 50.0, 30.0, 17.0, 83.0, 85.0, 10.0, 1.0
+- `SC_Build_Enablement1` (FLOAT): The percentage of completion for the first stage of build enablement tasks.
+  - Sample values: 15.0, 100.0, 0.0, 6.0, 87.0, 26.0, 82.0, 50.0, 30.0, 28.0
+- `Solution_Consulting1` (FLOAT): The numerical score representing the level of Solution Consulting expertise for each record.
+  - Sample values: 0.0, 100.0, 13.0, 18.0, 10.0, 20.0, 70.0, 6.0, 35.0, 2.0
+- `Commercial_BU` (STRING): The business unit or division associated with each record in the pipeline.
+  - Sample values: Life Sciences, Manufacturing, Hi-Tech, Technology, RCG, India, ROW, RoW, Europe, Europe-SAP
+- `Account` (STRING): The name of the company associated with the account in the opening pipeline.
+  - Sample values: Agilent, Alcon, Altra Industrial Motion, Applied Materials, Canadian National Railway Company, Carpenter Technology, Corning, Dorman, EPSON, Form Technologies
+- `Sales_Forecast_Category` (STRING): The level of certainty regarding the sales forecast for each opportunity in the pipeline.
+  - Sample values: Possible, Probable, Committed, Closed
+- `Opportunity_Status` (STRING): The current status of opportunities in the pipeline, including values such as "Open", "Closed", "Abandoned", and "Lost".
+  - Sample values: Open, Closed, Abandoned, Lost
+
+
+**Table Structure**
+ 
+vw_sales_hunting_budget (
+    Fiscal Year : STRING,
+    Region : STRING,
+    Type : STRING,
+    Accounts : STRING,
+    Opportunity Owner : STRING,
+    April : FLOAT,
+    May : FLOAT,
+    June : FLOAT,
+    July : FLOAT,
+    August : FLOAT,
+    September : FLOAT,
+    October : FLOAT,
+    November : FLOAT,
+    December : FLOAT,
+    January : FLOAT,
+    February : FLOAT,
+    March : FLOAT
+)
+ 
+# vw_sales_hunting_budget Table Metadata
+ 
+This document provides detailed information about the columns in the `bcone-sales-insights-dev-prj.salesinsights_dev_bqd.vw_sales_hunting_budget` table to help generate accurate queries.
+ 
+## Column Definitions and Sample Values
+ 
+- `Fiscal Year` (STRING): The fiscal year in which the hunting budget data was recorded.
+  - Sample values: FY26, FY25
+- `Region` (STRING): The geographical region where the hunting budget sales are allocated.
+  - Sample values: North America
+- `Type` (STRING): The type of sales transaction, indicating whether it is a renewal or a new deal.
+  - Sample values: Renewal, New Deal
+- `Accounts` (STRING): The column `Accounts` represents the names of various companies or entities associated with sales hunting budgets.
+  - Sample values: Beliv Company, Westlake Chemical Corporation, Lucid Motors, Synovus Financial, Guidant Global - KC, Regeneron Pharmaceuticals, Qualcomm, Adjustment_Michael, Net New-Harshal Mehta, Net New-Jennah Macallister
+- `Opportunity Owner` (STRING): The individual responsible for managing sales opportunities within the hunting budget.
+  - Sample values: Zachary�Sidwell, Vivek Mangal, Harshal Mehta, Prakash Narayanan, Michael Leen, Jennah Macallister, Michael Dahle, Gordon F, Ennio Devita
+- `April` (FLOAT): The column `April` represents the budget amounts allocated for hunting sales in the month of April.
+  - Sample values: 0.0, 50000.0, 639200.0, -1389333.33333333, 333333.333333333, 416666.666666667, 597666.666666667, 666666.666666667, 750000.0, 733333.333333333
+- `May` (FLOAT): The budget allocated for May sales activities in floating point format.
+  - Sample values: 0.0, 132000.0, 639200.0, -1471333.33333333, 333333.333333333, 416666.666666667, 597666.666666667, 666666.666666667, 750000.0, 733333.333333333
+- `June` (FLOAT): The budget allocated for June sales activities, stored as floating-point numbers.
+  - Sample values: 0.0, 75000.0, 319600.0, -1414333.33333333, 333333.333333333, 416666.666666667, 597666.666666667, 666666.666666667, 750000.0, 733333.333333333
+- `July` (FLOAT): The July column in the `vw_sales_hunting_budget` table represents the budget allocated for sales activities in July, stored as floating-point numbers.
+  - Sample values: 0.0, 1126000.0, 168796.0, -2079000.0, 236666.666666667, 416666.666666667, 291333.333333333, 666666.666666667, 750000.0, 1331204.0
+- `August` (FLOAT): The column `August` represents the budget allocated for sales hunting activities in August, stored as floating-point numbers.
+  - Sample values: 0.0, 168796.0, -953000.0, 236666.666666667, 416666.666666667, 291333.333333333, 666666.666666667, 750000.0, 1331204.0
+- `September` (FLOAT): The budget allocated for September in the sales hunting campaign.
+  - Sample values: 0.0, 290000.0, 337593.0, -1243000.0, 236666.666666667, 416666.666666667, 291333.333333333, 666666.666666667, 750000.0, 2662407.0
+- `October` (FLOAT): The budget allocated for October sales activities in floating-point format.
+  - Sample values: 0.0, 27500.0, -963000.0, 296666.666666667, 416666.666666667, 433000.0, 500000.0, 466666.666666667, 1222500.0
+- `November` (FLOAT): The budget allocated for November sales hunting activities in floating-point format.
+  - Sample values: 0.0, 27500.0, -963000.0, 296666.666666667, 416666.666666667, 433000.0, 500000.0, 466666.666666667, 1222500.0
+- `December` (FLOAT): The budget allocated for December sales activities in floating-point format.
+  - Sample values: 201000.0, 0.0, 110000.0, 100000.0, 55000.0, -1374000.0, 296666.666666667, 416666.666666667, 433000.0, 500000.0
+- `January` (FLOAT): The budget allocated for January sales hunting activities in various amounts.
+  - Sample values: 0.0, 200000.0, 549500.0, -1333333.33333333, 166666.666666667, 416666.666666667, 500000.0, 600000.0, 666666.666666667, 700500.0
+- `February` (FLOAT): The budget allocated for February sales hunting activities in floating point format.
+  - Sample values: 0.0, 549500.0, -1133333.33333333, 166666.666666667, 416666.666666667, 500000.0, 600000.0, 666666.666666667, 700500.0
+- `March` (FLOAT): The budget allocated for March in floating point format.
+  - Sample values: 0.0, 1099000.0, -1133333.33333333, 166666.666666667, 416666.666666667, 500000.0, 600000.0, 666666.666666667, 1401000.0

@@ -16,6 +16,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    return [{ source: '/favicon.ico', destination: '/favicon.svg' }]
+  },
 }
 
 mergeConfig(nextConfig, userConfig)

@@ -23,7 +23,7 @@ import tiktoken
 
 # Local application imports
 from models.azure_openai_model import model
-from utils.helper_functions import load_prompt
+from utils.prompt_loader import load_prompt
 
 # -----------------------------------------------------------------------------
 # SECTION: Load Prompts

@@ -1,0 +1,7 @@
+** Table Structure **
+
+REGION (
+    R_REGIONKEY    Number, 
+    R_NAME         Varchar, 
+    R_COMMENT      Varchar  
+)

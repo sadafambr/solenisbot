@@ -26,6 +26,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'FP&A Chatbot',
   description: 'FP&A assistant for analysis, tables, and visualizations',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+  },
 }
 
 export default function RootLayout({

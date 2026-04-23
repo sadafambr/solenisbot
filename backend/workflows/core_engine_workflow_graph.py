@@ -14,6 +14,7 @@ among agents, resolves dependencies, and tracks token usage during the conversat
 
 # Standard library imports
 from typing import Any, Dict
+import json
 import logging
 import os
 
@@ -25,7 +26,7 @@ from agents.core_engine_agents.supervisor_agent import supervisor_agent
 from agents.core_engine_agents.q_and_a_agent import q_and_a_agent
 from agents.generic_conversation_agent import generic_conversation_agent
 from agents.snowflake_agents.snowflake_query_agent import snowflake_agent
-from connectors.snowflake_connector_v1 import clean_snowflake_query
+from utils.snowflake_env import clean_snowflake_query
 
 # Third-party imports
 from dotenv import load_dotenv
@@ -44,8 +45,21 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
-# Maxium length of conversation history after which it will be summarized
-MAXIMUM_CONVERSATION_HISTORY_LENGTH = int(os.getenv("MAXIMUM_CONVERSATION_HISTORY_LENGTH"))
+# Maximum length of conversation history (message list items) before summarization
+# Minimum 1 so "0" in env does not trigger summarization on every turn (summary agent format mismatch)
+MAXIMUM_CONVERSATION_HISTORY_LENGTH = max(1, int(os.getenv("MAXIMUM_CONVERSATION_HISTORY_LENGTH", "50")))
+
+# In-graph summarization is off by default: it often returns non-JSON, breaking the run.
+def _env_truthy(name: str) -> bool:
+    return (os.getenv(name) or "").strip().lower() in ("1", "true", "yes", "on")
+
+WORKFLOW_ENABLE_CONVERSATION_SUMMARY = _env_truthy("WORKFLOW_ENABLE_CONVERSATION_SUMMARY")
+
+_TASK_DISPATCH = {
+    "snowflake_agent": snowflake_agent,
+    "human_agent": human_agent,
+    "generic_conversation_agent": generic_conversation_agent,
+}
 
 # -----------------------------------------------------------------------------
 # SECTION: Task Executor Implementation
@@ -55,18 +69,59 @@ def _trim_conversation_history(conversation_history: Any, max_messages: int = 8)
     """Trim conversation history to the last N messages and compact fields."""
     if not isinstance(conversation_history, list):
         return []
+    # Prefer to keep the last user turns; assistant blobs often use `content` not `user_input`.
     trimmed = conversation_history[-max_messages:]
     normalized = []
     for item in trimmed:
         if isinstance(item, dict):
+            role = (item.get("role") or "user").lower()
+            if role == "assistant":
+                u = (item.get("content") or item.get("user_input") or "")[:5000]
+            else:
+                u = item.get("user_input") or item.get("content") or ""
             normalized.append({
-                "user_input": item.get("user_input") or item.get("content") or "", 
-                "role": item.get("role", "user"),
+                "user_input": u,
+                "role": "assistant" if role == "assistant" else "user",
                 "type": item.get("type", "text")
             })
         else:
             normalized.append({"user_input": str(item), "role": "user", "type": "text"})
     return normalized
+
+
+def _task_as_dict(task: Any) -> Dict[str, Any]:
+    if isinstance(task, dict):
+        return task
+    if hasattr(task, "model_dump"):
+        return task.model_dump()
+    if hasattr(task, "dict"):
+        return task.dict()
+    raise TypeError(f"Unexpected task type: {type(task)!r}")
+
+
+def _normalize_supervisor_tasks(ai_tasks_list: Any) -> list:
+    if ai_tasks_list is None:
+        return []
+    raw = ai_tasks_list
+    if hasattr(raw, "model_dump") and not isinstance(raw, dict):
+        raw = raw.model_dump()
+    elif hasattr(raw, "dict") and not isinstance(raw, dict):
+        raw = raw.dict()
+    if isinstance(raw, dict):
+        if "tasks" not in raw:
+            logger.error("Supervisor output dict missing 'tasks': keys=%s", list(raw.keys()))
+            return []
+        raw = raw["tasks"]
+    if not isinstance(raw, list):
+        logger.error("Supervisor tasks not a list: %s", type(raw).__name__)
+        return []
+    out: list = []
+    for t in raw:
+        try:
+            out.append(_task_as_dict(t))
+        except TypeError as e:
+            logger.error("%s", e)
+    return out
 
 
 def execute_tasks(ai_tasks_list):
@@ -83,14 +138,24 @@ def execute_tasks(ai_tasks_list):
     total_output_tokens_count = 0
     generated_snowflake_queries_list = []
 
-    for i, task in enumerate(ai_tasks_list, start=1):  # Start sequence from 1
+    tasks_iter = _normalize_supervisor_tasks(ai_tasks_list)
+    for i, task in enumerate(tasks_iter, start=1):  # Start sequence from 1
         function_name = task["function_name"]
         function_params = task["function_params"]
         task_id = i  # Use sequence number as task ID
 
         # Resolve dependencies if any
         if task.get("depends_on"):
-            dependent_task_output = task_outputs[int(task["depends_on"]) - 1]["output"]
+            dep_idx = int(task["depends_on"]) - 1
+            if 0 <= dep_idx < len(task_outputs):
+                dependent_task_output = task_outputs[dep_idx]["output"]
+            else:
+                logger.warning(
+                    "depends_on=%s out of range (have %s task outputs); using empty prior output",
+                    task["depends_on"],
+                    len(task_outputs),
+                )
+                dependent_task_output = ""
             next_task_info = {"function_params": function_params}
             function_params, input_tokens_count, output_tokens_count = dependency_resolver(
                 dependent_task_output,
@@ -101,7 +166,7 @@ def execute_tasks(ai_tasks_list):
             logger.info("Dependency Resolver Output: %s", function_params)
 
 
-        func = globals().get(function_name)
+        func = _TASK_DISPATCH.get(function_name)
 
         # --- Patch: Ensure snowflake_agent gets a string, not a dict ---
         call_params = function_params
@@ -140,7 +205,7 @@ def execute_tasks(ai_tasks_list):
                 logger.error(f"Error executing {function_name}: {e}")
         else:
             scratchpad = f"Function '{function_name}' not found."
-            logger.error(f"Function '{function_name}' not found in the global namespace.")
+            logger.error("Unknown task function_name=%r (expected one of %s)", function_name, sorted(_TASK_DISPATCH))
 
         # Only store task output if it is non-empty
         if scratchpad not in (None, "", [], {}, ()) and bool(scratchpad):
@@ -150,13 +215,7 @@ def execute_tasks(ai_tasks_list):
                 "output": scratchpad
             })
 
-            print("\n")
-            print("#" * 50)
-            print(f"Task ID = {task_id}, Agent = {function_name}")
-            print("Agent Output = ")
-            print(scratchpad)
-            print("#" * 50)
-            print("\n")
+            logger.info("Task done id=%s agent=%s", task_id, function_name)
 
     return task_outputs, total_input_tokens_count, total_output_tokens_count, generated_snowflake_queries_list
 
@@ -164,7 +223,11 @@ def execute_tasks(ai_tasks_list):
 # SECTION: Workflow Graph Implementation
 # ----------------------------------------------------------------------------- 
 
-def ask_ellis_workflow_graph(user_input: str, conversation_history: Any) -> Dict[str, Any]:
+def ask_ellis_workflow_graph(
+    user_input: str,
+    conversation_history: Any,
+    chat_id: str | None = None,
+) -> Dict[str, Any]:
     """
     Execute the Ask Ellis workflow graph, managing conversation history and invoking various agents.
 
@@ -194,11 +257,7 @@ def ask_ellis_workflow_graph(user_input: str, conversation_history: Any) -> Dict
         logger.info("ask_ellis_workflow_graph: user_input=%s history_length=%s", user_input, len(trimmed_conversation_history))
         conversation["present_conversation"].append({"user_input": user_input})
 
-        print("\n")
-        print('*' * 50)
-        print("Invoking Supervisor Agent")
-        print('*' * 50)
-        print("\n")
+        logger.info("Invoking supervisor agent")
 
         # Step 1: Generate tasks using the supervisor agent, including retry context
         ai_tasks_list, input_tokens_count, output_tokens_count = supervisor_agent(
@@ -213,14 +272,7 @@ def ask_ellis_workflow_graph(user_input: str, conversation_history: Any) -> Dict
         if isinstance(ai_tasks_list, dict) and ai_tasks_list.get("error"):
             raise RuntimeError(f"Supervisor error: {ai_tasks_list.get('error')}")
 
-        print('\n')
-        print('*' * 50)
-        print("Supervisor Agent Tasks List")
-        print(ai_tasks_list)
-        print('*' * 50)
-        print('\n')
-
-        logger.info("Supervisor Agent Output: %s", ai_tasks_list)
+        logger.info("Supervisor tasks: %s", ai_tasks_list)
 
         # Step 2: Execute tasks using the execute_tasks function
         task_outputs, input_tokens_count, output_tokens_count, generated_snowflake_queries_list = execute_tasks(ai_tasks_list)
@@ -232,45 +284,60 @@ def ask_ellis_workflow_graph(user_input: str, conversation_history: Any) -> Dict
             [{task["function_name"]: task["output"]} for task in task_outputs]
         )
 
-        print('\n')
-        print('*' * 50)
-        print("Invoking Q&A Agent")
-        print('*' * 50)
-        print('\n')
+        logger.info("Invoking Q&A agent")
 
         # Final call to Q&A agent with agents' responses
+        hist_str = (
+            json.dumps(trimmed_conversation_history, ensure_ascii=False)[:25000]
+            if trimmed_conversation_history
+            else "[]"
+        )
         ellis_response, input_tokens_count, output_tokens_count = q_and_a_agent(
             user_input=user_input,
             agents_response=task_outputs,
-            conversation_history=trimmed_conversation_history
+            conversation_history=hist_str
         )
         total_input_tokens_count += input_tokens_count
         total_output_tokens_count += output_tokens_count
         conversation["present_conversation"].append({"ellis_response": ellis_response})
 
         # Additional step to handle conversation history if it exceeds max length
-        if len(conversation["conversation_history"]) > MAXIMUM_CONVERSATION_HISTORY_LENGTH:
-            conversation_summary, input_tokens_count, output_tokens_count = conversation_summary_agent(
-                conversation_history=conversation["conversation_history"]
-            )
-            total_input_tokens_count += input_tokens_count
-            total_output_tokens_count += output_tokens_count
-            conversation["conversation_history"].clear()
-            conversation["conversation_history"].append({"conversation_summary": conversation_summary})
+        if (
+            WORKFLOW_ENABLE_CONVERSATION_SUMMARY
+            and len(conversation["conversation_history"]) > MAXIMUM_CONVERSATION_HISTORY_LENGTH
+        ):
+            try:
+                conversation_summary, input_tokens_count, output_tokens_count = (
+                    conversation_summary_agent(
+                        conversation_history=conversation["conversation_history"]
+                    )
+                )
+                total_input_tokens_count += input_tokens_count
+                total_output_tokens_count += output_tokens_count
+                conversation["conversation_history"].clear()
+                conversation["conversation_history"].append(
+                    {"conversation_summary": conversation_summary}
+                )
+            except Exception as e:
+                logger.warning("Conversation summary step skipped: %s", e)
 
-        conversation["conversation_history"].append(conversation["present_conversation"])
+        # present_conversation is a flat list of dicts; extend so history stays a list of message dicts
+        conversation["conversation_history"].extend(conversation["present_conversation"])
 
         # Return final conversation details and token counts
-        return {
+        out: Dict[str, Any] = {
             "conversation": conversation,
             "generated_snowflake_query": generated_snowflake_queries_list,
             "input_tokens_count": total_input_tokens_count,
-            "output_tokens_count": total_output_tokens_count
+            "output_tokens_count": total_output_tokens_count,
         }
+        if chat_id:
+            out["chat_id"] = chat_id
+        return out
 
     except Exception as e:
         logger.exception("Error in ask_ellis_workflow_graph: %s", e)
-        return {
+        err_body: Dict[str, Any] = {
             "conversation": {
                 "conversation_history": trimmed_conversation_history if 'trimmed_conversation_history' in locals() else [],
                 "present_conversation": [{"user_input": user_input, "error": str(e)}],
@@ -281,6 +348,9 @@ def ask_ellis_workflow_graph(user_input: str, conversation_history: Any) -> Dict
             "output_tokens_count": total_output_tokens_count if 'total_output_tokens_count' in locals() else 0,
             "error": "ask_ellis_workflow_graph failed: %s" % str(e)
         }
+        if chat_id:
+            err_body["chat_id"] = chat_id
+        return err_body
 
 # -----------------------------------------------------------------------------
 # END OF MODULE

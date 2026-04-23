@@ -8,9 +8,7 @@ such as temperature for output generation. The module leverages the `ChatOpenAI`
 from the `langchain` library to interact with the OpenAI service.
 """
 
-# -----------------------------------------------------------------------------
 # SECTION: Imports
-# -----------------------------------------------------------------------------
 
 # Standard library imports
 import os
@@ -21,23 +19,17 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
 
-# -----------------------------------------------------------------------------
 # SECTION: Environment Setup
-# -----------------------------------------------------------------------------
 
 # Load environment variables from .env file
 load_dotenv()
 
-# -----------------------------------------------------------------------------
 # SECTION: Constants
-# -----------------------------------------------------------------------------
 
 # Temperature for model output; controls the creativity of the generated text
 TEMPERATURE = 0.5
 
-# -----------------------------------------------------------------------------
 # SECTION: Model Initialization
-# -----------------------------------------------------------------------------
 
 # Initialize OpenAI GPT model with the necessary configuration parameters
 model = ChatOpenAI(
@@ -47,6 +39,3 @@ model = ChatOpenAI(
     request_timeout=120,
 )
 
-# -----------------------------------------------------------------------------
-# END OF MODULE
-# -----------------------------------------------------------------------------

@@ -18,7 +18,18 @@ import {
  
 } from "@/components/ui/accordion"
  
-import { BookOpen, ChartBar, LineChart } from "lucide-react"
+import { BookOpen, ChartBar, LineChart, Trash2 } from "lucide-react"
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
  
 import { cn } from "@/lib/utils"
  
@@ -39,12 +50,22 @@ interface ChatSidebarProps {
 export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps) {
  
   const [searchQuery, setSearchQuery] = useState("")
+
+  const [chatIdPendingDelete, setChatIdPendingDelete] = useState<string | null>(null)
  
   const [chatHistory, setChatHistory] = useState<
-    { chat_id: string; title?: string | null; created_at?: string }[]
+    {
+      chat_id: string
+      title?: string | null
+      created_at?: string
+      updated_at?: string
+      message_count?: number
+    }[]
   >([])
- 
-  const { loadChatHistory, clearMessages, startNewChat } = useMessagesStore()
+
+  const { loadChatHistory, clearMessagesPreserveSession, startNewChat, deleteChatSession } =
+    useMessagesStore()
+  const activeChatId = useMessagesStore((s) => s.currentChatId)
   const sidebarRefreshKey = useMessagesStore((s) => s.sidebarRefreshKey)
  
   const { user } = useUserStore()
@@ -65,10 +86,18 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
  
         }
  
-        const res = await api.get(`/chat/chat_sessions?user_id=${user.id}`)
-        const sessions = res.data?.sessions
-        setChatHistory(Array.isArray(sessions) ? sessions : [])
-        console.log("Fetched chat history:", res.data)
+        const res = await api.get(`/api/chat/list?user_id=${user.id}`)
+        const sessions = Array.isArray(res.data) ? res.data : res.data?.sessions
+        const normalized = Array.isArray(sessions)
+          ? sessions.map((s: any) => ({
+              chat_id: s.chat_id || s.id,
+              title: s.title,
+              created_at: s.created_at,
+              updated_at: s.updated_at,
+              message_count: s.message_count,
+            }))
+          : []
+        setChatHistory(normalized)
  
       } catch (error) {
  
@@ -270,22 +299,30 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
  
   }
  
-  const selectChat = async (title: any, id: any) => {
- 
+  const selectChat = async (_title: unknown, id: string) => {
     try {
- 
-      clearMessages()
- 
+      clearMessagesPreserveSession()
       await loadChatHistory(id)
- 
     } catch (error) {
- 
       console.log(error)
- 
       alert("Failed to fetch chat history. Please try again later.")
- 
     }
- 
+  }
+
+  const requestDeleteChat = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    setChatIdPendingDelete(id)
+  }
+
+  const runDeleteChat = (id: string) => {
+    setChatIdPendingDelete(null)
+    void (async () => {
+      try {
+        await deleteChatSession(id)
+      } catch {
+        alert("Could not delete chat.")
+      }
+    })()
   }
  
   return (
@@ -348,15 +385,37 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
               <div className="flex flex-col pb-2">
                 {Array.isArray(filteredHistory) && filteredHistory.length > 0 ? (
                   filteredHistory.map((chat: any) => (
-                    <button
+                    <div
                       key={chat.chat_id}
-                      type="button"
-                      className="w-full rounded-md border-b border-white/[0.06] py-2.5 pl-1 text-left transition-colors hover:bg-white/[0.05]"
-                      onClick={() => selectChat(chat.title, chat.chat_id)}
+                      className={cn(
+                        "group flex items-stretch gap-0.5 border-b border-white/[0.06]",
+                        activeChatId === chat.chat_id &&
+                          "border-l-2 border-l-white bg-white/[0.08] pl-1"
+                      )}
                     >
-                      <span className="line-clamp-2 text-[12px] leading-snug text-white/85">{chat.title}</span>
-                      <span className="mt-0.5 block truncate font-mono text-[10px] text-white/35">{chat.created_at}</span>
-                    </button>
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 rounded-md py-2.5 pl-1 text-left transition-colors hover:bg-white/[0.05]"
+                        onClick={() => selectChat(chat.title, chat.chat_id)}
+                      >
+                        <span className="line-clamp-2 text-[12px] leading-snug text-white/85">
+                          {chat.title?.trim() ? chat.title : "Untitled chat"}
+                        </span>
+                        <span className="mt-0.5 block truncate font-mono text-[10px] text-white/35">
+                          {chat.message_count != null ? `${chat.message_count} msgs · ` : ""}
+                          {chat.updated_at || chat.created_at}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="shrink-0 px-1 text-white/30 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                        title="Delete chat"
+                        aria-label="Delete chat"
+                        onClick={(e) => requestDeleteChat(e, chat.chat_id)}
+                      >
+                        <Trash2 className="mx-auto h-3.5 w-3.5" strokeWidth={1.5} />
+                      </button>
+                    </div>
                   ))
                 ) : (
                   <p className="border-b border-white/10 py-6 text-center text-[11px] text-white/40">No history</p>
@@ -441,6 +500,35 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">FP&amp;A</p>
         </div>
       </div>
+
+      <AlertDialog
+        open={chatIdPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setChatIdPendingDelete(null)
+        }}
+      >
+        <AlertDialogContent className="border border-white/10 bg-[#141414] text-white sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/65">
+              This will remove the chat from your history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 bg-transparent text-white hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-600/90"
+              onClick={() => {
+                if (chatIdPendingDelete) runDeleteChat(chatIdPendingDelete)
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   )
  
