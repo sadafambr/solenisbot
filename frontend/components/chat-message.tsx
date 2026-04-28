@@ -6,7 +6,10 @@ import { formatDistanceToNow } from "date-fns"
 import { renderChart } from "@/components/chart-renderer"
 import { FileSpreadsheet, Download } from "lucide-react"
 import { DataTable } from "@/components/data-table"
+import { ContentActionControls } from "@/components/content-action-controls"
 import { cn } from "@/lib/utils"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { buildTabularTextSummary } from "@/lib/response-formatting"
 
 const userBubble = "max-w-[min(100%,32rem)] rounded-xl bg-black px-5 py-4 text-white shadow-sm"
 const assistantBubble =
@@ -33,41 +36,60 @@ function safeFormatDistance(timestamp: Date | string | number | undefined) {
 }
 
 function TableOrTextReply({ message }: { message: Message }) {
-  const [mode, setMode] = useState<"table" | "text">("table")
+  const [mode, setMode] = useState<"summary" | "table">("table")
   if (!message.tableData) {
     return message.content ? (
       <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{message.content}</div>
     ) : null
   }
 
+  const summaryText =
+    message.textSummary?.trim() ||
+    buildTabularTextSummary(message.tableData) ||
+    "No summary available."
+
   return (
-    <div className="space-y-3">
-      {mode === "table" ? (
-        <>
-          <button
-            type="button"
-            onClick={() => setMode("text")}
-            className="font-sans text-[11px] font-medium text-neutral-600 underline decoration-neutral-400 underline-offset-2 transition-colors hover:text-black"
-          >
-            Switch to Text
-          </button>
-          <DataTable data={message.tableData} />
-        </>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setMode("table")}
-            className="font-sans text-[11px] font-medium text-neutral-600 underline decoration-neutral-400 underline-offset-2 transition-colors hover:text-black"
-          >
-            Switch to Table
-          </button>
-          <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-            {message.content?.trim() ? message.content : "—"}
+    <Tabs
+      value={mode}
+      onValueChange={(v) => setMode(v as "summary" | "table")}
+      className="w-full"
+    >
+      <TabsList className="grid h-auto w-full max-w-xs grid-cols-2 gap-0 rounded-none border-0 border-b border-black/10 bg-transparent p-0">
+        <TabsTrigger
+          value="summary"
+          className="rounded-none border-0 border-b-2 border-transparent bg-transparent py-2.5 font-sans text-[11px] font-medium shadow-none data-[state=active]:border-black data-[state=active]:bg-transparent data-[state=active]:text-black data-[state=active]:shadow-none data-[state=inactive]:text-black/45"
+        >
+          Summary
+        </TabsTrigger>
+        <TabsTrigger
+          value="table"
+          className="rounded-none border-0 border-b-2 border-transparent bg-transparent py-2.5 font-sans text-[11px] font-medium shadow-none data-[state=active]:border-black data-[state=active]:bg-transparent data-[state=active]:text-black data-[state=active]:shadow-none data-[state=inactive]:text-black/45"
+        >
+          Table
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="summary" className="mt-3 outline-none">
+        <div className="overflow-hidden rounded-xl border border-white/40 bg-white/45 font-sans shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] backdrop-blur-[12px]">
+          <div className="flex items-center justify-end border-b border-black/10 px-3 py-2">
+            <ContentActionControls variant="summary" summaryText={summaryText} />
           </div>
-        </>
-      )}
-    </div>
+          <div className="px-4 pb-4 pt-3 text-sm leading-relaxed text-neutral-900">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+              Summary
+            </p>
+            <div className="mt-2 whitespace-pre-wrap">{summaryText}</div>
+          </div>
+        </div>
+      </TabsContent>
+      <TabsContent value="table" className="mt-3 outline-none">
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <ContentActionControls variant="table" tableData={message.tableData} />
+          </div>
+          <DataTable data={message.tableData} />
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 }
 

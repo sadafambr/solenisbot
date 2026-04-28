@@ -1,9 +1,0 @@
-** Table Structure**
-
-NATION
-(
-N_NATIONKEY      Number,
-N_NAME           Varchar,
-N_REGIONKEY      Number,
-N_COMMENT        Varchar
-  )

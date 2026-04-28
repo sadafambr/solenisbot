@@ -1,37 +1,55 @@
 import { type Message, MessageType, type TableData } from "./types";
 import {
+  buildTabularTextSummary,
   graphPointsToTableData,
   metricsToBarChartData,
+  normalizeTableData,
   parseKeyValueRecordLines,
   parseMarkdownTable,
   parseMetricLines,
   parseNumberedListTable,
+  parseStackedKeyValueLines,
   stripFirstMarkdownTable,
   stripLeadingParagraphBeforeNumberedList,
+  tableDataFromRecords,
+  tryParseJsonRecordArray,
+  wantsBriefResponse,
   wantsTabularDisplay,
   wantsTabularQuery,
   wantsVisualization,
 } from "./response-formatting";
 
-/** Agent steps often return an array of row objects (e.g. snowflake_agent) — normalize for DATA_TABLE. */
-function tableDataFromObjectRows(rows: Record<string, unknown>[]): TableData | null {
-  if (!rows?.length) return null;
-  const first = rows[0];
-  if (!first || typeof first !== "object") return null;
-  const columns = Object.keys(first);
-  if (!columns.length) return null;
-  const outRows = rows.map((row) =>
-    columns.map((c) => {
-      const v = row[c];
-      if (v == null) return "";
-      if (typeof v === "number") return v;
-      const s = String(v).replace(/,/g, "").trim();
-      const n = Number(s);
-      if (Number.isFinite(n) && /^-?[\d.]+$/.test(s)) return n;
-      return String(v);
-    })
-  );
-  return { columns, rows: outRows };
+function withNormalizedTable(td: TableData | null | undefined): TableData | null {
+  return normalizeTableData(td ?? null);
+}
+
+/** Normalize rows and add concise bullets when user asked list/show/get/… */
+function applyDualTablePresentation(msg: Message, userInput: string): Message {
+  if (!msg.tableData) return msg;
+  const norm = withNormalizedTable(msg.tableData);
+  if (!norm) return msg;
+  const out: Message = { ...msg, tableData: norm };
+  if (!wantsTabularQuery(userInput)) return out;
+  return { ...out, textSummary: buildTabularTextSummary(norm) };
+}
+
+function buildDataTableMessage(
+  content: string,
+  table: TableData,
+  insightfulQuestions: unknown,
+  userInput: string
+): Message {
+  const norm = withNormalizedTable(table)!;
+  const base: Message = {
+    id: Date.now().toString(),
+    content,
+    type: MessageType.DATA_TABLE,
+    role: "assistant",
+    timestamp: new Date(),
+    tableData: norm,
+    insightful_questions: insightfulQuestions as Message["insightful_questions"],
+  };
+  return applyDualTablePresentation(base, userInput);
 }
 
 /** Backend sometimes returns non-string ellis_response; parsers expect string. */
@@ -47,6 +65,7 @@ function normalizeEllisText(raw: unknown): string | undefined {
  */
 export function hasMeaningfulApiError(res: any): boolean {
   if (!res || typeof res !== "object") return false;
+  if (res.cancelled) return false;
   if (res.error === true) return true;
   const e = res.error;
   if (typeof e === "string" && e.trim() !== "") return true;
@@ -63,16 +82,16 @@ export function buildFallbackAssistantMessages(apiResponse: any, userInput: stri
   const agentTable = extractAgentTableData(present);
   const preferTable = wantsTabularDisplay(userInput, undefined);
   if (agentTable && (preferTable || (agentTable.rows?.length ?? 0) > 0)) {
-    return [
-      {
-        id: Date.now().toString(),
-        content: "",
-        type: MessageType.DATA_TABLE,
-        role: "assistant",
-        timestamp: new Date(),
-        tableData: agentTable,
-      },
-    ];
+    const norm = withNormalizedTable(agentTable)!;
+    const base: Message = {
+      id: Date.now().toString(),
+      content: "",
+      type: MessageType.DATA_TABLE,
+      role: "assistant",
+      timestamp: new Date(),
+      tableData: norm,
+    };
+    return [applyDualTablePresentation(base, userInput)];
   }
   const ellisRaw = present.find((x: any) => x?.ellis_response)?.ellis_response;
   const text = normalizeEllisText(ellisRaw);
@@ -97,8 +116,8 @@ function extractAgentTableData(presentConversation: any[]): TableData | null {
     for (const val of Object.values(item)) {
       if (!Array.isArray(val) || val.length === 0) continue;
       if (!val.every((x) => x != null && typeof x === "object" && !Array.isArray(x))) continue;
-      const td = tableDataFromObjectRows(val as Record<string, unknown>[]);
-      if (td) return td;
+      const td = tableDataFromRecords(val as Record<string, unknown>[]);
+      if (td) return withNormalizedTable(td);
     }
   }
   return null;
@@ -106,17 +125,25 @@ function extractAgentTableData(presentConversation: any[]): TableData | null {
 
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000").replace(/\/$/, "");
 
-export async function askAlgo(userInput: string, conversationHistory: any[] = []) {
+export async function askAlgo(
+  userInput: string,
+  conversationHistory: any[] = [],
+  options?: { signal?: AbortSignal }
+) {
   try {
+    const payload: Record<string, unknown> = {
+      user_input: userInput,
+      conversation_history: conversationHistory,
+    };
+    if (wantsBriefResponse(userInput)) payload.response_style = "brief";
+
     const response = await fetch(`${apiBase}/ask-algo`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        user_input: userInput,
-        conversation_history: conversationHistory,
-      }),
+      body: JSON.stringify(payload),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -138,9 +165,14 @@ export async function askAlgo(userInput: string, conversationHistory: any[] = []
 
     return await response.json();
   } catch (error: unknown) {
-    console.error('Error:', error);
-    const message =
-      error instanceof Error ? error.message : 'Network error';
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return { cancelled: true };
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      return { cancelled: true };
+    }
+    console.error("Error:", error);
+    const message = error instanceof Error ? error.message : "Network error";
     return {
       error: true,
       status: -1,
@@ -207,6 +239,8 @@ export function transformApiResponseToCharts(apiResponse: any, userInput: string
     const ellisResponse = ellisResponseEarly;
     if (ellisResponse) {
       const tableFromMd = parseMarkdownTable(ellisResponse);
+      const jsonTable = tryParseJsonRecordArray(ellisResponse);
+      const stackedTable = parseStackedKeyValueLines(ellisResponse);
       const kvTable = parseKeyValueRecordLines(ellisResponse);
       const numberedListTable = parseNumberedListTable(ellisResponse);
 
@@ -226,56 +260,58 @@ export function transformApiResponseToCharts(apiResponse: any, userInput: string
         }
       }
 
+      const agentTableWithEllis = extractAgentTableData(presentConversation);
+
       if (preferTable && tableFromMd) {
         const textOnly = stripFirstMarkdownTable(ellisResponse);
-        return [{
-          id: Date.now().toString(),
-          content: textOnly || ellisResponse,
-          type: MessageType.DATA_TABLE,
-          role: "assistant",
-          timestamp: new Date(),
-          tableData: tableFromMd,
-          insightful_questions: insightfulQuestions,
-        }];
+        return [
+          buildDataTableMessage(
+            textOnly || ellisResponse,
+            tableFromMd,
+            insightfulQuestions,
+            userInput
+          ),
+        ];
+      }
+
+      if (jsonTable && (preferTable || jsonTable.rows.length > 0)) {
+        return [
+          buildDataTableMessage(ellisResponse, jsonTable, insightfulQuestions, userInput),
+        ];
+      }
+
+      if (stackedTable && (preferTable || stackedTable.columns.length >= 2)) {
+        return [
+          buildDataTableMessage(ellisResponse, stackedTable, insightfulQuestions, userInput),
+        ];
       }
 
       if (preferTable && kvTable) {
-        return [{
-          id: Date.now().toString(),
-          content: ellisResponse,
-          type: MessageType.DATA_TABLE,
-          role: "assistant",
-          timestamp: new Date(),
-          tableData: kvTable,
-          insightful_questions: insightfulQuestions,
-        }];
+        return [buildDataTableMessage(ellisResponse, kvTable, insightfulQuestions, userInput)];
       }
 
       if (preferTable && numberedListTable) {
         const intro = stripLeadingParagraphBeforeNumberedList(ellisResponse);
-        return [{
-          id: Date.now().toString(),
-          content: intro || ellisResponse,
-          type: MessageType.DATA_TABLE,
-          role: "assistant",
-          timestamp: new Date(),
-          tableData: numberedListTable,
-          insightful_questions: insightfulQuestions,
-        }];
+        return [
+          buildDataTableMessage(
+            intro || ellisResponse,
+            numberedListTable,
+            insightfulQuestions,
+            userInput
+          ),
+        ];
       }
 
-      const agentTableWithEllis = extractAgentTableData(presentConversation);
       if (preferTable && agentTableWithEllis) {
         const textOnly = tableFromMd ? stripFirstMarkdownTable(ellisResponse) : ellisResponse;
-        return [{
-          id: Date.now().toString(),
-          content: (textOnly && textOnly.trim()) || ellisResponse,
-          type: MessageType.DATA_TABLE,
-          role: "assistant",
-          timestamp: new Date(),
-          tableData: agentTableWithEllis,
-          insightful_questions: insightfulQuestions,
-        }];
+        return [
+          buildDataTableMessage(
+            (textOnly && textOnly.trim()) || ellisResponse,
+            agentTableWithEllis,
+            insightfulQuestions,
+            userInput
+          ),
+        ];
       }
 
       return [{
@@ -290,15 +326,9 @@ export function transformApiResponseToCharts(apiResponse: any, userInput: string
 
     const agentTableOnly = extractAgentTableData(presentConversation);
     if (agentTableOnly && (preferTable || wantsTabularQuery(userInput))) {
-      return [{
-        id: Date.now().toString(),
-        content: "",
-        type: MessageType.DATA_TABLE,
-        role: "assistant",
-        timestamp: new Date(),
-        tableData: agentTableOnly,
-        insightful_questions: insightfulQuestions,
-      }];
+      return [
+        buildDataTableMessage("", agentTableOnly, insightfulQuestions, userInput),
+      ];
     }
 
     return null;
@@ -391,15 +421,14 @@ export function transformApiResponseToCharts(apiResponse: any, userInput: string
   }
 
   if (preferTable) {
-    return [{
-      id: Date.now().toString(),
-      content: graphData.summary || "",
-      type: MessageType.DATA_TABLE,
-      role: "assistant",
-      timestamp: new Date(),
-      tableData: graphPointsToTableData(data, x_label, y_label),
-      insightful_questions: insightfulQuestions,
-    }];
+    return [
+      buildDataTableMessage(
+        graphData.summary || "",
+        graphPointsToTableData(data, x_label, y_label),
+        insightfulQuestions,
+        userInput
+      ),
+    ];
   }
 
   if (data.length === 1) {

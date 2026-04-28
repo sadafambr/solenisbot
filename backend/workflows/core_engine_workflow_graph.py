@@ -13,10 +13,11 @@ among agents, resolves dependencies, and tracks token usage during the conversat
 # ----------------------------------------------------------------------------- 
 
 # Standard library imports
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import json
 import logging
 import os
+import re
 
 # Local application imports
 from agents.core_engine_agents.dependency_resolver_agent import dependency_resolver
@@ -223,10 +224,31 @@ def execute_tasks(ai_tasks_list):
 # SECTION: Workflow Graph Implementation
 # ----------------------------------------------------------------------------- 
 
+_BRIEF_RE = re.compile(
+    r"\b(short|brief|briefly|concise|succinct|tl;dr|tldr|in one line|one sentence|"
+    r"one-line|be quick|just the answer|minimal)\b",
+    re.I,
+)
+
+
+def _normalize_response_style(
+    user_input: str, explicit: Optional[str] = None
+) -> Optional[str]:
+    if explicit is not None and str(explicit).strip() != "":
+        key = str(explicit).strip().lower()
+        if key in ("brief", "short", "minimal"):
+            return "brief"
+        return None
+    if user_input and _BRIEF_RE.search(user_input):
+        return "brief"
+    return None
+
+
 def ask_ellis_workflow_graph(
     user_input: str,
     conversation_history: Any,
     chat_id: str | None = None,
+    response_style: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Execute the Ask Ellis workflow graph, managing conversation history and invoking various agents.
@@ -292,10 +314,12 @@ def ask_ellis_workflow_graph(
             if trimmed_conversation_history
             else "[]"
         )
+        style = _normalize_response_style(user_input or "", response_style)
         ellis_response, input_tokens_count, output_tokens_count = q_and_a_agent(
             user_input=user_input,
             agents_response=task_outputs,
-            conversation_history=hist_str
+            conversation_history=hist_str,
+            response_style=style,
         )
         total_input_tokens_count += input_tokens_count
         total_output_tokens_count += output_tokens_count

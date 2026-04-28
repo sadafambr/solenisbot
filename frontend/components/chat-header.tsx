@@ -10,20 +10,22 @@ interface ChatHeaderProps {
 
 export default function ChatHeader({ toggleSidebar }: ChatHeaderProps) {
   return (
-    <header className="flex shrink-0 items-center justify-between border-b border-[#E0E0E0] bg-gradient-to-b from-[#111111] to-[#1A1A1A] px-4 py-2.5 md:px-5">
+    <header className="flex shrink-0 items-center justify-between border-b border-black/10 bg-[#EBE6DC] px-4 py-2.5 md:px-5">
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="h-9 w-9 rounded-md text-white hover:bg-white/10 hover:text-white"
+          className="h-9 w-9 rounded-md text-neutral-900 hover:bg-black/[0.06] hover:text-black"
         >
           <Icons.menu className="h-[18px] w-[18px]" strokeWidth={1.5} />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
-        <span className="font-display select-none text-[15px] font-normal tracking-[0.06em] text-white">FP&amp;A</span>
+        <span className="select-none font-sans text-[15px] font-semibold tracking-[0.06em] text-black">
+          FP&amp;A
+        </span>
       </div>
-      <UserProfile variant="headerDark" />
+      <UserProfile variant="headerLight" />
     </header>
   )
 }

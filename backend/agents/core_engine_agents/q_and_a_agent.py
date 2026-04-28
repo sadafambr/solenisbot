@@ -19,6 +19,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.pydantic_v1 import BaseModel, Field
 import logging
+from typing import Optional
 
 # Local application imports
 from models.azure_openai_model import model
@@ -59,11 +60,30 @@ parser = JsonOutputParser(pydantic_object=QA)
 # Define the Q&A chain
 q_and_a_chain = q_and_a_prompt | model | parser
 
+
+def _response_style_block(response_style: Optional[str]) -> str:
+    if not response_style:
+        return ""
+    key = str(response_style).strip().lower()
+    if key in ("brief", "short", "minimal"):
+        return (
+            "### Response length (brief)\n"
+            "The user asked for a short answer. Reply in at most one or two sentences, "
+            "or a few bullets. Omit filler, long introductions, and closing pleasantries "
+            "unless needed for clarity."
+        )
+    return ""
+
 # ----------------------------------------------------------------------------- 
 # SECTION: Q&A Agent Function
 # ----------------------------------------------------------------------------- 
 
-def q_and_a_agent(user_input: str, agents_response: str, conversation_history: str) -> tuple:
+def q_and_a_agent(
+    user_input: str,
+    agents_response: str,
+    conversation_history: str,
+    response_style: Optional[str] = None,
+) -> tuple:
     """
     Generate a final answer using the Q&A agent.
 
@@ -93,7 +113,8 @@ def q_and_a_agent(user_input: str, agents_response: str, conversation_history: s
             ai_response = q_and_a_chain.invoke({
                 "user_input": user_input,
                 "agents_response": agents_response,
-                "conversation_history": conversation_history
+                "conversation_history": conversation_history,
+                "response_style_block": _response_style_block(response_style),
             })
             input_tokens_count = cb.prompt_tokens
             output_tokens_count = cb.completion_tokens

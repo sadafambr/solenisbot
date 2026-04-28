@@ -53,6 +53,10 @@ export interface Message {
   /** Same shape as chartData; used when hydrating from API `response_graph`. */
   response_graph?: ChartData
   tableData?: TableData
+  /** Short bullet summary when showing dual Text + Table (list/show/retrieve…). */
+  textSummary?: string
+  /** Full model text when `textSummary` is used for the concise preview. */
+  rawAssistantText?: string
   chartType?: string
   chartTitle?: string
   graph_type?: string

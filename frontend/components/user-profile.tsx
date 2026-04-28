@@ -15,8 +15,8 @@ import { useMessagesStore } from "@/store/messages"
 import { cn } from "@/lib/utils"
 
 type UserProfileProps = {
-  /** Dark bar (chat header gradient) */
-  variant?: "default" | "headerDark"
+  /** Dark bar (legacy) | Light beige navbar | default */
+  variant?: "default" | "headerDark" | "headerLight"
 }
 
 function userInitials(user: any) {
@@ -32,6 +32,7 @@ export default function UserProfile({ variant = "default" }: UserProfileProps) {
   const { clearMessages } = useMessagesStore()
   const router = useRouter()
   const dark = variant === "headerDark"
+  const lightNav = variant === "headerLight"
 
   const handleLogout = () => {
     clearMessages()
@@ -44,18 +45,27 @@ export default function UserProfile({ variant = "default" }: UserProfileProps) {
         <button
           type="button"
           className={cn(
-            "flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30",
-            dark
-              ? "text-white/90 hover:bg-white/10"
-              : "text-neutral-900 hover:bg-black/[0.04]"
+            "flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors focus:outline-none focus-visible:ring-2",
+            dark && "focus-visible:ring-white/30 text-white/90 hover:bg-white/10",
+            lightNav &&
+              "text-neutral-900 hover:bg-black/[0.06] focus-visible:ring-black/20",
+            !dark && !lightNav && "text-neutral-900 hover:bg-black/[0.04] focus-visible:ring-black/15"
           )}
         >
-          <Avatar className={cn("h-7 w-7", dark && "ring-1 ring-white/20")}>
+          <Avatar
+            className={cn(
+              "h-7 w-7",
+              dark && "ring-1 ring-white/20",
+              lightNav && "ring-1 ring-black/10"
+            )}
+          >
             <AvatarImage src={user?.image} alt={user?.name} />
             <AvatarFallback
               className={cn(
-                "text-[10px] font-medium",
-                dark ? "bg-white/15 text-white" : "bg-neutral-900 text-white"
+                "font-sans text-[10px] font-medium",
+                dark && "bg-white/15 text-white",
+                lightNav && "bg-black/10 text-black",
+                !dark && !lightNav && "bg-neutral-900 text-white"
               )}
             >
               {userInitials(user)}

@@ -1,9 +1,0 @@
-** Table Structure ** 
-
-PARTSUPP (
-    PS_PARTKEY      Number,
-    PS_SUPPKEY      Number,
-    PS_AVAILQTY     Number,
-    PS_SUPPLYCOST   Number,
-    PS_COMMENT      Varchar
-)

@@ -1,5 +1,5 @@
+import type { LucideProps } from "lucide-react"
 import {
-  type LightbulbIcon as LucideProps,
   MessageSquare,
   User,
   LogOut,

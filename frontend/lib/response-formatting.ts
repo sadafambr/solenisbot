@@ -1,5 +1,189 @@
 import type { ChartData, TableData } from "./types"
 
+/** Normalize agent / parser output into wide rows (horizontal headers) when possible. */
+export function tableDataFromRecords(rows: Record<string, unknown>[]): TableData | null {
+  if (!rows?.length) return null
+  const first = rows[0]
+  if (!first || typeof first !== "object") return null
+  const columns = Object.keys(first)
+  if (!columns.length) return null
+  const outRows = rows.map((row) =>
+    columns.map((c) => {
+      const v = row[c]
+      if (v == null) return ""
+      if (typeof v === "number") return v
+      const s = String(v).replace(/,/g, "").trim()
+      const n = Number(s)
+      if (Number.isFinite(n) && /^-?[\d.]+$/.test(s)) return n
+      return String(v)
+    })
+  )
+  return { columns, rows: outRows }
+}
+
+function coerceScalarCell(s: string): string | number {
+  const v = s.replace(/\*+/g, "").trim()
+  const cleaned = v.replace(/,/g, "")
+  const n = Number(cleaned)
+  if (/^-?[\d.]+$/.test(cleaned) && Number.isFinite(n)) return n
+  return v
+}
+
+/**
+ * Vertical "stacked" lines (e.g. TPC-H style): `C_CUSTKEY    60001` → one wide row per record.
+ * A repeated column name starts a new record.
+ */
+export function parseStackedKeyValueLines(text: string): TableData | null {
+  const lines = text.split(/\r?\n/)
+  type Pair = [string, string | number]
+  const records: Pair[][] = []
+  let current: Pair[] = []
+  const seenInRecord = new Set<string>()
+
+  const parseLine = (raw: string): Pair | null => {
+    const t = raw.trim()
+    if (!t || t.startsWith("#") || t.startsWith("```") || t.startsWith("|")) return null
+    let m = t.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/)
+    if (m) return [m[1].trim(), coerceScalarCell(m[2])]
+    m = t.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s{2,}(.+)$/)
+    if (m) return [m[1].trim(), coerceScalarCell(m[2])]
+    m = t.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\t+(.+)$/)
+    if (m) return [m[1].trim(), coerceScalarCell(m[2])]
+    return null
+  }
+
+  for (const raw of lines) {
+    const p = parseLine(raw)
+    if (!p) continue
+    const [k] = p
+    if (seenInRecord.has(k) && current.length) {
+      records.push(current)
+      current = []
+      seenInRecord.clear()
+    }
+    seenInRecord.add(k)
+    current.push(p)
+  }
+  if (current.length) records.push(current)
+
+  if (records.length === 0) return null
+  const colOrder: string[] = []
+  for (const rec of records) {
+    for (const [k] of rec) {
+      if (!colOrder.includes(k)) colOrder.push(k)
+    }
+  }
+  const rows = records.map((rec) => {
+    const m = new Map(rec)
+    return colOrder.map((c) => m.get(c) ?? "")
+  })
+  return { columns: colOrder, rows }
+}
+
+/**
+ * Turn two-column Field/Value (or Key/Value) tables into one row per record with horizontal headers.
+ */
+export function pivotKeyValueRowsToWideTable(data: TableData): TableData {
+  if (data.columns.length !== 2) return data
+  const c0 = data.columns[0].trim().toLowerCase()
+  const c1 = data.columns[1].trim().toLowerCase()
+  const isKv =
+    (c0 === "field" && c1 === "value") ||
+    (c0 === "key" && c1 === "value") ||
+    (c0 === "column" && c1 === "value")
+  if (!isKv) return data
+
+  type Pair = [string, string | number]
+  const records: Pair[][] = []
+  let current: Pair[] = []
+  const seen = new Set<string>()
+
+  for (const row of data.rows) {
+    const k = String(row[0] ?? "").trim()
+    if (!k) continue
+    const v = row[1]
+    if (seen.has(k) && current.length) {
+      records.push(current)
+      current = []
+      seen.clear()
+    }
+    seen.add(k)
+    current.push([k, v ?? ""])
+  }
+  if (current.length) records.push(current)
+
+  if (records.length === 0) return data
+
+  const colOrder: string[] = []
+  for (const rec of records) {
+    for (const [k] of rec) {
+      if (!colOrder.includes(k)) colOrder.push(k)
+    }
+  }
+  const wideRows = records.map((rec) => {
+    const m = new Map(rec)
+    return colOrder.map((col) => m.get(col) ?? "")
+  })
+  return { columns: colOrder, rows: wideRows }
+}
+
+export function normalizeTableData(data: TableData | null | undefined): TableData | null {
+  if (!data?.columns?.length || !data.rows) return data ?? null
+  return pivotKeyValueRowsToWideTable(data)
+}
+
+/** First fenced ```json ... ``` array of objects, or a top-level JSON array. */
+export function tryParseJsonRecordArray(text: string): TableData | null {
+  const trimmed = text.trim()
+  let candidate = ""
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence) candidate = fence[1].trim()
+  else if (trimmed.startsWith("[")) candidate = trimmed
+  else return null
+  try {
+    const parsed = JSON.parse(candidate) as unknown
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    if (!parsed.every((x) => x != null && typeof x === "object" && !Array.isArray(x))) return null
+    return tableDataFromRecords(parsed as Record<string, unknown>[])
+  } catch {
+    return null
+  }
+}
+
+export function wantsBriefResponse(userInput: string): boolean {
+  const t = userInput.trim().toLowerCase()
+  if (t.length < 2) return false
+  return /\b(short|brief|briefly|concise|succinct|tl;dr|tldr|in one line|one sentence|one-line|be quick|just the answer|minimal)\b/i.test(
+    userInput
+  )
+}
+
+/** Short bullet lines for dual Text + Table mode (list/show/retrieve…). */
+export function buildTabularTextSummary(data: TableData, maxRows = 5): string {
+  const n = data.rows.length
+  if (n === 0) return "No rows to show."
+  const head = `Found ${n} record${n === 1 ? "" : "s"}.`
+  let labelCol = 0
+  const nameIdx = data.columns.findIndex((c) => /name|title|label|customer|id|key/i.test(c))
+  if (nameIdx >= 0) labelCol = nameIdx
+  const secondCol =
+    data.columns.length > 1 ? data.columns.findIndex((_, i) => i !== labelCol) : -1
+  const lines: string[] = []
+  const limit = Math.min(maxRows, n)
+  for (let i = 0; i < limit; i++) {
+    const row = data.rows[i]
+    const primary = row[labelCol] ?? ""
+    if (secondCol >= 0 && data.columns[secondCol]) {
+      const sec = row[secondCol] ?? ""
+      lines.push(`• ${primary} — ${data.columns[secondCol]}: ${sec}`)
+    } else {
+      lines.push(`• ${String(primary)}`)
+    }
+  }
+  if (n > limit) lines.push(`• … and ${n - limit} more (see table).`)
+  return [head, "", ...lines].join("\n")
+}
+
 /** User phrasing that suggests a tabular / list result. */
 export function wantsTabularQuery(userInput: string): boolean {
   const t = userInput.trim().toLowerCase()

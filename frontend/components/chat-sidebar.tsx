@@ -328,7 +328,7 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
   return (
     <aside
       className={cn(
-        "relative z-10 h-full shrink-0 overflow-hidden border-r border-white/[0.08] bg-[#0B0B0B] transition-[width] duration-300 ease-in-out motion-reduce:transition-none",
+        "relative z-10 h-full shrink-0 overflow-hidden border-r border-black/10 bg-[#EBE6DC] transition-[width] duration-300 ease-in-out motion-reduce:transition-none",
         isOpen ? "w-[240px]" : "w-0 border-r-0"
       )}
       aria-hidden={!isOpen}
@@ -345,15 +345,15 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
               placeholder="Search…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 rounded-md border border-white/[0.08] bg-white/[0.04] py-2 pl-8 pr-2.5 text-[12px] text-white/90 shadow-none placeholder:text-white/35 focus-visible:border-white/25 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="h-9 rounded-md border border-black/12 bg-white/60 py-2 pl-8 pr-2.5 text-[12px] text-black shadow-none placeholder:text-black/40 focus-visible:border-black/25 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
-              <BookOpen className="h-3.5 w-3.5 text-white/35" strokeWidth={1.5} />
+              <BookOpen className="h-3.5 w-3.5 text-black/40" strokeWidth={1.5} />
             </div>
           </div>
           <button
             type="button"
-            className="w-full rounded-md py-2 pl-1 text-left text-[12px] text-white/75 transition-colors hover:bg-white/[0.06] hover:text-white"
+            className="w-full rounded-md py-2 pl-1 text-left text-[12px] font-medium text-black/80 transition-colors hover:bg-black/[0.05] hover:text-black"
             onClick={() => void startNewChat()}
           >
             + New chat
@@ -361,16 +361,16 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
         </div>
 
         <Tabs defaultValue="history" className="mt-5 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <TabsList className="grid h-auto w-full shrink-0 grid-cols-2 gap-0 rounded-none border-0 border-b border-white/[0.08] bg-transparent p-0">
+          <TabsList className="grid h-auto w-full shrink-0 grid-cols-2 gap-0 rounded-none border-0 border-b border-black/10 bg-transparent p-0">
             <TabsTrigger
               value="history"
-              className="rounded-none border-0 border-b-2 border-transparent bg-transparent py-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40 shadow-none data-[state=active]:border-white data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="rounded-none border-0 border-b-2 border-transparent bg-transparent py-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-black/45 shadow-none data-[state=active]:border-black data-[state=active]:bg-transparent data-[state=active]:text-black data-[state=active]:shadow-none"
             >
               History
             </TabsTrigger>
             <TabsTrigger
               value="saved"
-              className="rounded-none border-0 border-b-2 border-transparent bg-transparent py-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40 shadow-none data-[state=active]:border-white data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:shadow-none"
+              className="rounded-none border-0 border-b-2 border-transparent bg-transparent py-2.5 text-[10px] font-medium uppercase tracking-[0.12em] text-black/45 shadow-none data-[state=active]:border-black data-[state=active]:bg-transparent data-[state=active]:text-black data-[state=active]:shadow-none"
             >
               Saved
             </TabsTrigger>
@@ -388,27 +388,27 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                     <div
                       key={chat.chat_id}
                       className={cn(
-                        "group flex items-stretch gap-0.5 border-b border-white/[0.06]",
+                        "group flex items-stretch gap-0.5 border-b border-black/[0.08]",
                         activeChatId === chat.chat_id &&
-                          "border-l-2 border-l-white bg-white/[0.08] pl-1"
+                          "border-l-2 border-l-black bg-black/[0.06] pl-1"
                       )}
                     >
                       <button
                         type="button"
-                        className="min-w-0 flex-1 rounded-md py-2.5 pl-1 text-left transition-colors hover:bg-white/[0.05]"
+                        className="min-w-0 flex-1 rounded-md py-2.5 pl-1 text-left transition-colors hover:bg-black/[0.04]"
                         onClick={() => selectChat(chat.title, chat.chat_id)}
                       >
-                        <span className="line-clamp-2 text-[12px] leading-snug text-white/85">
+                        <span className="line-clamp-2 text-[12px] leading-snug text-black/90">
                           {chat.title?.trim() ? chat.title : "Untitled chat"}
                         </span>
-                        <span className="mt-0.5 block truncate font-mono text-[10px] text-white/35">
+                        <span className="mt-0.5 block truncate font-sans text-[10px] tabular-nums text-black/45">
                           {chat.message_count != null ? `${chat.message_count} msgs · ` : ""}
                           {chat.updated_at || chat.created_at}
                         </span>
                       </button>
                       <button
                         type="button"
-                        className="shrink-0 px-1 text-white/30 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                        className="shrink-0 px-1 text-black/35 opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
                         title="Delete chat"
                         aria-label="Delete chat"
                         onClick={(e) => requestDeleteChat(e, chat.chat_id)}
@@ -418,7 +418,7 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                     </div>
                   ))
                 ) : (
-                  <p className="border-b border-white/10 py-6 text-center text-[11px] text-white/40">No history</p>
+                  <p className="border-b border-black/10 py-6 text-center text-[11px] text-black/45">No history</p>
                 )}
               </div>
             </TabsContent>
@@ -429,8 +429,8 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
               className="scrollbar-sidebar absolute inset-0 mt-0 overflow-y-auto overscroll-contain p-0 pr-1 pt-4 outline-none transition-opacity duration-300 ease-in-out data-[state=inactive]:pointer-events-none data-[state=inactive]:z-0 data-[state=inactive]:opacity-0 data-[state=active]:z-10 data-[state=active]:opacity-100"
             >
             <Accordion type="single" collapsible className="w-full pb-2">
-              <AccordionItem value="bookings-budget" className="border-white/10">
-                <AccordionTrigger className="rounded-md px-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-white/60 hover:bg-white/[0.04] hover:no-underline hover:text-white/90 [&>svg]:text-white/40 [&[data-state=open]]:no-underline">
+              <AccordionItem value="bookings-budget" className="border-black/10">
+                <AccordionTrigger className="rounded-md px-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-black/60 hover:bg-black/[0.04] hover:no-underline hover:text-black [&>svg]:text-black/40 [&[data-state=open]]:no-underline">
                   Group 1
                 </AccordionTrigger>
                 <AccordionContent>
@@ -439,10 +439,10 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                       <button
                         key={prompt.id}
                         type="button"
-                        className="flex w-full items-start gap-2 border-b border-white/[0.06] py-2 text-left text-[12px] text-white/80 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        className="flex w-full items-start gap-2 border-b border-black/[0.08] py-2 text-left text-[12px] text-black/85 transition-colors hover:bg-black/[0.04] hover:text-black"
                         onClick={() => onPromptSelect?.(prompt.title, prompt.chartType)}
                       >
-                        <prompt.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/35" strokeWidth={1.5} />
+                        <prompt.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-black/40" strokeWidth={1.5} />
                         <span className="line-clamp-3 leading-snug">{prompt.title}</span>
                       </button>
                     ))}
@@ -450,8 +450,8 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="win-rates" className="border-white/10">
-                <AccordionTrigger className="rounded-md px-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-white/60 hover:bg-white/[0.04] hover:no-underline hover:text-white/90 [&>svg]:text-white/40 [&[data-state=open]]:no-underline">
+              <AccordionItem value="win-rates" className="border-black/10">
+                <AccordionTrigger className="rounded-md px-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-black/60 hover:bg-black/[0.04] hover:no-underline hover:text-black [&>svg]:text-black/40 [&[data-state=open]]:no-underline">
                   Group 2
                 </AccordionTrigger>
                 <AccordionContent>
@@ -460,10 +460,10 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                       <button
                         key={prompt.id}
                         type="button"
-                        className="flex w-full items-start gap-2 border-b border-white/[0.06] py-2 text-left text-[12px] text-white/80 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        className="flex w-full items-start gap-2 border-b border-black/[0.08] py-2 text-left text-[12px] text-black/85 transition-colors hover:bg-black/[0.04] hover:text-black"
                         onClick={() => onPromptSelect?.(prompt.title, prompt.chartType)}
                       >
-                        <prompt.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/35" strokeWidth={1.5} />
+                        <prompt.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-black/40" strokeWidth={1.5} />
                         <span className="line-clamp-3 leading-snug">{prompt.title}</span>
                       </button>
                     ))}
@@ -471,8 +471,8 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="deal-analytics" className="border-white/10">
-                <AccordionTrigger className="rounded-md px-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-white/60 hover:bg-white/[0.04] hover:no-underline hover:text-white/90 [&>svg]:text-white/40 [&[data-state=open]]:no-underline">
+              <AccordionItem value="deal-analytics" className="border-black/10">
+                <AccordionTrigger className="rounded-md px-1 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em] text-black/60 hover:bg-black/[0.04] hover:no-underline hover:text-black [&>svg]:text-black/40 [&[data-state=open]]:no-underline">
                   Group 3
                 </AccordionTrigger>
                 <AccordionContent>
@@ -481,10 +481,10 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
                       <button
                         key={prompt.id}
                         type="button"
-                        className="flex w-full items-start gap-2 border-b border-white/[0.06] py-2 text-left text-[12px] text-white/80 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        className="flex w-full items-start gap-2 border-b border-black/[0.08] py-2 text-left text-[12px] text-black/85 transition-colors hover:bg-black/[0.04] hover:text-black"
                         onClick={() => onPromptSelect?.(prompt.title, prompt.chartType)}
                       >
-                        <prompt.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/35" strokeWidth={1.5} />
+                        <prompt.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-black/40" strokeWidth={1.5} />
                         <span className="line-clamp-3 leading-snug">{prompt.title}</span>
                       </button>
                     ))}
@@ -496,8 +496,8 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
           </div>
         </Tabs>
 
-        <div className="shrink-0 border-t border-white/[0.08] pt-3">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">FP&amp;A</p>
+        <div className="shrink-0 border-t border-black/10 pt-3">
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-black/40">FP&amp;A</p>
         </div>
       </div>
 
@@ -507,15 +507,15 @@ export default function ChatSidebar({ isOpen, onPromptSelect }: ChatSidebarProps
           if (!open) setChatIdPendingDelete(null)
         }}
       >
-        <AlertDialogContent className="border border-white/10 bg-[#141414] text-white sm:max-w-md">
+        <AlertDialogContent className="border border-black/10 bg-[#EBE6DC] text-black sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete this chat?</AlertDialogTitle>
-            <AlertDialogDescription className="text-white/65">
+            <AlertDialogTitle className="text-black">Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription className="text-black/65">
               This will remove the chat from your history. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/20 bg-transparent text-white hover:bg-white/10">
+            <AlertDialogCancel className="border-black/15 bg-white/50 text-black hover:bg-white/80">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

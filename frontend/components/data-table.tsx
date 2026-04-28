@@ -1,132 +1,151 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { TableData } from "@/lib/types"
-import {
-  attachLeadingFieldKey,
-  tryParseInlineKeyValueList,
-} from "@/lib/response-formatting"
+import { stringifyCellForExport } from "@/lib/table-export"
 import { cn } from "@/lib/utils"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 
 interface DataTableProps {
   data: TableData
 }
 
-function formatCell(cell: string | number | undefined) {
-  if (cell === undefined || cell === null) return "—"
-  if (typeof cell === "number") {
-    return Number.isInteger(cell) ? String(cell) : cell.toFixed(2)
-  }
-  return cell.toString()
+function isMetricColumn(name: string) {
+  return /\b(total|sum|avg|count|balance|amount|revenue|qty|quantity|price|value)\b/i.test(name)
 }
 
-function fieldColumnIndex(columns: string[]): number {
-  return columns.findIndex((c) => /^field$/i.test(c.trim()))
-}
-
-function ExpandedInlineKeyValues({ pairs }: { pairs: { key: string; value: string }[] }) {
-  return (
-    <dl className="space-y-0">
-      {pairs.map((p, i) => (
-        <div
-          key={`${p.key}-${i}`}
-          className="grid grid-cols-1 gap-1 border-t border-[#E8E8E6] py-2 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(6rem,9rem)_1fr] sm:items-baseline sm:gap-4"
-        >
-          <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-500">
-            {p.key}
-          </dt>
-          <dd className="break-words font-mono text-[13px] leading-relaxed text-black tabular-nums">
-            {p.value || "—"}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-function renderCell(
-  cell: string | number | undefined,
-  opts: { fieldLabelHint?: string }
-) {
-  const raw = String(cell ?? "")
-  const expanded = tryParseInlineKeyValueList(raw)
-  if (!expanded) {
-    return <span className="break-words">{formatCell(cell)}</span>
-  }
-  const pairs = attachLeadingFieldKey(expanded, opts.fieldLabelHint)
-  return <ExpandedInlineKeyValues pairs={pairs} />
-}
+type SortDir = "asc" | "desc" | null
 
 export function DataTable({ data }: DataTableProps) {
-  const [page, setPage] = useState(1)
-  const rowsPerPage = 5
-  const totalPages = Math.max(1, Math.ceil(data.rows.length / rowsPerPage))
-  const paginatedRows = data.rows.slice((page - 1) * rowsPerPage, page * rowsPerPage)
+  const [search, setSearch] = useState("")
+  const [sortCol, setSortCol] = useState<number | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>(null)
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return data.rows
+    return data.rows.filter((row) =>
+      row.some((cell) => stringifyCellForExport(cell).toLowerCase().includes(q))
+    )
+  }, [data.rows, search])
+
+  const sortedRows = useMemo(() => {
+    if (sortCol == null || !sortDir) return filteredRows
+    const col = sortCol
+    const copy = [...filteredRows]
+    copy.sort((a, b) => {
+      const va = a[col]
+      const vb = b[col]
+      const na = typeof va === "number" ? va : Number(String(va).replace(/,/g, ""))
+      const nb = typeof vb === "number" ? vb : Number(String(vb).replace(/,/g, ""))
+      const bothNum =
+        Number.isFinite(na) &&
+        Number.isFinite(nb) &&
+        String(va).trim() !== "" &&
+        String(vb).trim() !== ""
+      if (bothNum) return sortDir === "asc" ? na - nb : nb - na
+      const sa = stringifyCellForExport(va).toLowerCase()
+      const sb = stringifyCellForExport(vb).toLowerCase()
+      if (sa < sb) return sortDir === "asc" ? -1 : 1
+      if (sa > sb) return sortDir === "asc" ? 1 : -1
+      return 0
+    })
+    return copy
+  }, [filteredRows, sortCol, sortDir])
+
+  const toggleSort = (ci: number) => {
+    if (sortCol !== ci) {
+      setSortCol(ci)
+      setSortDir("asc")
+      return
+    }
+    if (sortDir === "asc") {
+      setSortDir("desc")
+    } else if (sortDir === "desc") {
+      setSortCol(null)
+      setSortDir(null)
+    } else {
+      setSortDir("asc")
+    }
+  }
 
   return (
-    <div className="text-black">
-      <div className="divide-y divide-[#E0E0E0]">
-        {paginatedRows.map((row, rowIndex) => {
-          const fieldIdx = fieldColumnIndex(data.columns)
-          return (
-            <article key={rowIndex} className="py-4 first:pt-0">
-              <p className="font-display mb-3 text-base font-normal text-black">
-                Record {(page - 1) * rowsPerPage + rowIndex + 1}
-              </p>
-              <dl className="space-y-0">
-                {data.columns.map((col, ci) => (
-                  <div
-                    key={ci}
-                    className="grid grid-cols-1 gap-1 border-t border-[#E0E0E0] py-2.5 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(7rem,10rem)_1fr] sm:items-baseline sm:gap-8"
-                  >
-                    <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-                      {col}
-                    </dt>
-                    <dd className="min-w-0 font-mono text-[13px] leading-relaxed text-black tabular-nums">
-                      {renderCell(row[ci], {
-                        fieldLabelHint:
-                          fieldIdx >= 0 && ci !== fieldIdx
-                            ? String(row[fieldIdx] ?? "")
-                            : undefined,
-                      })}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </article>
-          )
-        })}
+    <div className="space-y-3 text-black">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <Input
+          placeholder="Search rows…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 max-w-xs rounded-lg border-black/12 bg-white/55 text-sm backdrop-blur-sm"
+          aria-label="Filter table rows"
+        />
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between border-t border-[#E0E0E0] pt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className={cn(
-              "transition-opacity hover:text-black",
-              page === 1 && "pointer-events-none opacity-30"
+      <div className="max-h-[min(70vh,28rem)] overflow-auto rounded-xl border border-black/10 bg-white/50 backdrop-blur-sm">
+        <Table>
+          <TableHeader className="sticky top-0 z-10 [&_tr]:border-black/10 [&_tr]:shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
+            <TableRow className="border-black/10 bg-white/90 backdrop-blur-sm hover:bg-black/[0.03]">
+              {data.columns.map((col, ci) => (
+                <TableHead
+                  key={ci}
+                  className={cn(
+                    "h-11 bg-white/90 px-3 text-left text-xs font-semibold text-neutral-700 backdrop-blur-sm",
+                    isMetricColumn(col) && "text-black"
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-left hover:bg-black/5"
+                    onClick={() => toggleSort(ci)}
+                  >
+                    {col}
+                    {sortCol !== ci && <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
+                    {sortCol === ci && sortDir === "asc" && <ArrowUp className="h-3.5 w-3.5" />}
+                    {sortCol === ci && sortDir === "desc" && <ArrowDown className="h-3.5 w-3.5" />}
+                  </button>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={data.columns.length}
+                  className="py-8 text-center text-sm text-neutral-500"
+                >
+                  No rows match your filter.
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedRows.map((row, ri) => (
+                <TableRow key={ri} className="border-black/10 hover:bg-black/[0.03]">
+                  {row.map((cell, ci) => (
+                    <TableCell
+                      key={ci}
+                      className={cn(
+                        "max-w-[min(24rem,40vw)] px-3 py-2 align-top font-sans text-[13px] leading-snug text-black tabular-nums",
+                        isMetricColumn(data.columns[ci] ?? "") && "font-semibold"
+                      )}
+                    >
+                      <span className="break-words">{stringifyCellForExport(cell)}</span>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
             )}
-          >
-            Prev
-          </button>
-          <span className="font-mono text-[11px] normal-case tracking-normal text-neutral-600">
-            {page} / {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className={cn(
-              "transition-opacity hover:text-black",
-              page === totalPages && "pointer-events-none opacity-30"
-            )}
-          >
-            Next
-          </button>
-        </div>
-      )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

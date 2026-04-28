@@ -18,6 +18,7 @@ import {
 import { useMessagesStore } from "@/store/messages"
 import api from "@/lib/axiosInstance"
 import { useUserStore } from "@/store/user"
+import { wantsBriefResponse } from "@/lib/response-formatting"
 
 export default function ChatInterface() {
   const messagesRaw = useMessagesStore((s) => s.messages)
@@ -34,6 +35,8 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [generatingPercent, setGeneratingPercent] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const [regeneratePrompt, setRegeneratePrompt] = useState<string | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -88,6 +91,12 @@ export default function ChatInterface() {
     const trimmed = userText.trim()
     if (!trimmed) return
 
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+    const signal = ac.signal
+    setRegeneratePrompt(null)
+
     const userMessage: Message = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       content: trimmed,
@@ -114,17 +123,40 @@ export default function ChatInterface() {
       let apiResponse: any
       if (chatId && !String(chatId).startsWith("local-")) {
         try {
-          const { data } = await api.post(`/api/chat/${chatId}/message`, {
-            user_id: currentUser.id,
-            user_input: trimmed,
-          })
+          const { data } = await api.post(
+            `/api/chat/${chatId}/message`,
+            {
+              user_id: currentUser.id,
+              user_input: trimmed,
+              ...(wantsBriefResponse(trimmed) ? { response_style: "brief" } : {}),
+            },
+            { signal }
+          )
           apiResponse = data
         } catch (err) {
+          if (axios.isCancel(err)) {
+            throw err
+          }
           console.warn("/api/chat/.../message failed; retrying via /ask-algo (same as Postman).", err)
-          apiResponse = await askAlgo(trimmed, buildConversationHistoryPayload())
+          apiResponse = await askAlgo(trimmed, buildConversationHistoryPayload(), { signal })
         }
       } else {
-        apiResponse = await askAlgo(trimmed, buildConversationHistoryPayload())
+        apiResponse = await askAlgo(trimmed, buildConversationHistoryPayload(), { signal })
+      }
+
+      if (apiResponse?.cancelled) {
+        addMessage({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          content:
+            "Generation stopped before the model finished. Use Regenerate to resend the same prompt, or edit your message.",
+          type: MessageType.TEXT,
+          role: "assistant",
+          timestamp: new Date(),
+        })
+        setRegeneratePrompt(trimmed)
+        setIsLoading(false)
+        abortRef.current = null
+        return
       }
 
       if (hasMeaningfulApiError(apiResponse)) {
@@ -141,6 +173,7 @@ export default function ChatInterface() {
           timestamp: new Date(),
         })
         setIsLoading(false)
+        abortRef.current = null
         return
       }
 
@@ -174,6 +207,8 @@ export default function ChatInterface() {
             })(),
             clarification_question: message.clarification_question,
             requires_clarification: message.requires_clarification,
+            textSummary: message.textSummary,
+            rawAssistantText: message.rawAssistantText,
           }
           addMessage(apiMessage)
           saveMessage(userMessage, apiMessage)
@@ -193,9 +228,25 @@ export default function ChatInterface() {
       }
 
       setIsLoading(false)
+      abortRef.current = null
     } catch (error) {
       console.error("Error:", error)
-      let shown = "Sorry, there was an error processing your request."
+      if (axios.isCancel(error)) {
+        addMessage({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          content:
+            "Generation stopped before the model finished. Use Regenerate to resend the same prompt, or edit your message.",
+          type: MessageType.TEXT,
+          role: "assistant",
+          timestamp: new Date(),
+        })
+        setRegeneratePrompt(trimmed)
+        setIsLoading(false)
+        abortRef.current = null
+        return
+      }
+      let shown =
+        "We could not complete this request. Check that the API is running, then try again. If the problem continues, open the browser Network tab for details."
       if (axios.isAxiosError(error)) {
         const data = error.response?.data
         if (data && typeof data === "object" && "error" in data) {
@@ -215,7 +266,12 @@ export default function ChatInterface() {
         timestamp: new Date(),
       })
       setIsLoading(false)
+      abortRef.current = null
     }
+  }
+
+  const stopGeneration = () => {
+    abortRef.current?.abort()
   }
 
   const handleInsightfulQuestionClick = (questionText: string) => {
@@ -288,9 +344,20 @@ export default function ChatInterface() {
                     Generating
                   </span>
                 </div>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-neutral-600">
-                  {generatingPercent}%
-                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="font-mono text-[11px] tabular-nums text-neutral-600">
+                    {generatingPercent}%
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 border-black/25 bg-white/70 text-[11px] font-medium"
+                    onClick={stopGeneration}
+                  >
+                    Stop
+                  </Button>
+                </div>
               </div>
               <div
                 className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-neutral-200/90"
@@ -301,6 +368,28 @@ export default function ChatInterface() {
                   style={{ width: `${generatingPercent}%` }}
                 />
               </div>
+            </div>
+          )}
+
+          {regeneratePrompt && !isLoading && (
+            <div className="mb-5 flex max-w-2xl flex-wrap items-center gap-3 rounded-xl border border-black/10 bg-white/60 px-4 py-3 font-sans text-sm text-neutral-800">
+              <span className="text-neutral-600">Retry the last cancelled prompt?</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                onClick={() => void sendUserText(regeneratePrompt)}
+              >
+                Regenerate
+              </Button>
+              <button
+                type="button"
+                className="text-xs text-neutral-500 underline underline-offset-2 hover:text-black"
+                onClick={() => setRegeneratePrompt(null)}
+              >
+                Dismiss
+              </button>
             </div>
           )}
 

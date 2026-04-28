@@ -101,7 +101,10 @@ def _process_ask_request():
         return jsonify(ellis_response), 200
 
     ellis_response = ask_ellis_workflow_graph(
-        user_input, conversation_history, chat_id=str(chat_id_ctx) if chat_id_ctx else None
+        user_input,
+        conversation_history,
+        chat_id=str(chat_id_ctx) if chat_id_ctx else None,
+        response_style=data.get("response_style"),
     )
 
     error_msg = ""
@@ -428,7 +431,10 @@ def api_chat_post_message(chat_id):
         return jsonify(ellis_response), 200
 
     ellis_response = ask_ellis_workflow_graph(
-        user_input, conversation_history[-10:], chat_id=chat_id
+        user_input,
+        conversation_history[-10:],
+        chat_id=chat_id,
+        response_style=data.get("response_style"),
     )
 
     error_msg = ""
